@@ -11,86 +11,98 @@
         body.dark-theme { --bg-gradient: linear-gradient(135deg, #2d3436 0%, #000000 100%); --glass: rgba(30, 30, 30, 0.95); --text-main: #ffffff; --card-bg: #2d3436; --input-bg: #636e72; --dark: #ffffff; }
         * { box-sizing: border-box; }
         
-        /* تحسين التمرير ومنع التحديد */
         body { 
             margin: 0; 
             font-family: 'Tajawal', sans-serif; 
             background: var(--bg-gradient); 
             min-height: 100vh; 
+            /* هذا السطر يضمن التوسط في الصفحة الكبيرة */
             display: flex; 
             justify-content: center; 
             align-items: center; 
             overflow: hidden; 
             transition: background 0.5s;
-            -webkit-user-select: none; /* منع تحديد النص للجوال */
+            -webkit-user-select: none;
             user-select: none;
-            overscroll-behavior: none; /* منع سحب الصفحة للأسفل */
+            overscroll-behavior: none;
         }
 
-        /* تحسين الحاوية الرئيسية للتكيف مع الجوال واللابتوب */
+        /* الحاوية الرئيسية - تتصرف كشاشة كاملة في الجوال وكبطاقة في اللابتوب */
         #app-container { 
             width: 100%; 
             max-width: 500px; 
-            /* استخدام dvh لحل مشكلة شريط العنوان في الجوال */
+            /* dvh للجوال لحل مشاكل المتصفحات */
             height: 100dvh; 
-            max-height: 100dvh;
             background: var(--glass); 
             position: relative; 
             overflow: hidden; 
             display: flex; 
             flex-direction: column; 
             transition: background 0.3s; 
-            border-radius: 0; /* في الجوال، الحواف مربعة أفضل */
             box-shadow: none;
         }
 
-        /* إعادة التصميم الجميل للشاشات الأكبر (لابتوب/تابلت) */
+        /* تنسيق خاص للابتوب والشاشات الكبيرة */
         @media (min-width: 501px) {
             #app-container {
-                height: 95vh;
-                max-height: 900px;
+                height: 90vh;
+                max-height: 850px;
                 border-radius: 30px;
                 box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             }
         }
 
-        /* تحسين الشاشات لتكون قابلة للتمرير */
+        /* الشاشات الداخلية - التوسط هو الأساس هنا */
         .screen { 
             position: absolute; 
             top: 0; 
             left: 0; 
             width: 100%; 
             height: 100%; 
-            padding: 20px; /* تقليل الهوامش للجوال */
-            padding-top: 60px; /* مساحة للأزرار العلوية */
-            padding-bottom: 40px;
+            padding: 20px;
+            /* مساحة علوية آمنة للأزرار */
+            padding-top: 70px; 
+            
             display: flex; 
             flex-direction: column; 
             align-items: center; 
-            justify-content: flex-start; /* تغيير مهم: البدء من الأعلى */
-            overflow-y: auto; /* السماح بالتمرير */
+            /* هذا السطر هو الذي يضع كل شيء في المنتصف عمودياً */
+            justify-content: center; 
+            
+            overflow-y: auto; 
             transition: all 0.4s; 
             opacity: 0; 
             pointer-events: none; 
             transform: scale(0.95); 
             z-index: 0; 
-            -webkit-overflow-scrolling: touch; /* تمرير ناعم في iOS */
-        }
-        
-        /* محاذاة المحتوى للوسط إذا كانت الشاشة كبيرة */
-        @media (min-height: 700px) {
-            .screen { justify-content: center; padding-top: 20px; }
+            -webkit-overflow-scrolling: touch;
         }
 
         .screen.active { opacity: 1; pointer-events: all; transform: scale(1); z-index: 10; }
         
-        .theme-toggle-btn { position: absolute; top: 15px; left: 15px; z-index: 100; background: rgba(255,255,255,0.2); border: none; font-size: 1.5rem; cursor: pointer; padding: 10px; border-radius: 50%; transition: 0.3s; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        /* الأزرار العلوية ثابتة ومحفوظة المكان */
+        .theme-toggle-btn { position: absolute; top: 20px; left: 20px; z-index: 100; background: rgba(255,255,255,0.2); border: none; font-size: 1.5rem; cursor: pointer; padding: 10px; border-radius: 50%; transition: 0.3s; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .theme-toggle-btn:hover { transform: scale(1.1); background: rgba(255,255,255,0.4); }
         
-        .exit-btn { position: absolute; top: 15px; right: 15px; z-index: 100; background: #ff7675; color: white; border: none; font-size: 1.2rem; cursor: pointer; padding: 10px 15px; border-radius: 15px; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-weight: bold; display: none; }
+        .exit-btn { position: absolute; top: 20px; right: 20px; z-index: 100; background: #ff7675; color: white; border: none; font-size: 1.2rem; cursor: pointer; padding: 10px 15px; border-radius: 15px; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-weight: bold; display: none; }
         .exit-btn:hover { transform: scale(1.1); background: #d63031; }
 
-        .avatar-preview-box { width: 220px; height: 240px; background: #f0f3ff; border-radius: 30px; border: 4px solid var(--primary); display: flex; justify-content: center; align-items: center; margin-bottom: 20px; overflow: visible; box-shadow: inset 0 0 15px rgba(0,0,0,0.05); flex-shrink: 0; }
+        /* حاوية السؤال - توسيط النص */
+        .question-box {
+            background: var(--card-bg); 
+            padding: 20px; 
+            border-radius: 15px; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05); 
+            margin-bottom: 20px; 
+            width: 100%;
+            text-align: center; /* توسيط نص السؤال */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100px; /* ضمان ارتفاع مناسب للسؤال */
+        }
+
+        .avatar-preview-box { width: 240px; height: 260px; background: #f0f3ff; border-radius: 30px; border: 4px solid var(--primary); display: flex; justify-content: center; align-items: center; margin-bottom: 20px; overflow: visible; box-shadow: inset 0 0 15px rgba(0,0,0,0.05); flex-shrink: 0; }
         .avatar-preview-box svg { width: 100%; height: 100%; filter: drop-shadow(0 8px 12px rgba(0,0,0,0.15)); }
         
         .home-avatar-box { width: 160px; height: 180px; margin: 10px auto; display: flex; justify-content: center; align-items: center; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.2)); flex-shrink: 0; }
@@ -113,9 +125,8 @@
         .btn:active { transform: translateY(4px); box-shadow: none; }
         .btn-danger { background-color: #e17055; color: white; box-shadow: 0 4px 0 #d63031; }
         
-        .input-group { width: 100%; margin-bottom: 15px; text-align: left; }
-        /* تحسين الإدخال في الجوال: حجم الخط 16px يمنع الزووم في آيفون */
-        input[type="text"], input[type="number"], select { width: 100%; padding: 14px; border: 2px solid #b2bec3; border-radius: 15px; font-size: 16px; outline: none; transition: 0.3s; background: var(--input-bg); color: var(--text-main); -webkit-user-select: text; user-select: text; }
+        .input-group { width: 100%; margin-bottom: 15px; text-align: center; }
+        input[type="text"], input[type="number"], select { width: 100%; padding: 14px; border: 2px solid #b2bec3; border-radius: 15px; font-size: 16px; outline: none; transition: 0.3s; background: var(--input-bg); color: var(--text-main); -webkit-user-select: text; user-select: text; text-align: center; }
         input:focus { border-color: var(--primary); }
         
         input[type=range] { width: 100%; -webkit-appearance: none; background: transparent; margin: 10px 0; }
@@ -141,7 +152,8 @@
         
         .mini-avatar svg { width: 30px; height: 30px; }
         
-        .game-footer { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: auto; width: 100%; background: var(--card-bg); padding: 10px; border-radius: 15px; border: 1px solid rgba(0,0,0,0.05); min-height: 70px; }
+        /* الفوتر أصبح جزءاً من التدفق الطبيعي في المنتصف */
+        .game-footer { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 20px; width: 100%; background: var(--card-bg); padding: 10px; border-radius: 15px; border: 1px solid rgba(0,0,0,0.05); min-height: 60px; }
         .footer-player { display: flex; flex-direction: column; align-items: center; width: 45px; position: relative; transition: 0.3s; }
         .footer-avatar { width: 40px; height: 40px; transition: 0.3s; }
         .footer-name { font-size: 0.7rem; color: var(--text-main); font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; margin-top: 2px; }
@@ -201,8 +213,8 @@
 
     <div id="game-screen" class="screen">
         <div class="timer-bar" id="game-timer"></div>
-        <div style="background: var(--card-bg); padding: 15px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 15px; width: 100%;">
-            <p id="question-text" style="color: var(--text-main); font-weight: bold; font-size: 1.1rem; margin: 0;">...</p>
+        <div class="question-box">
+            <p id="question-text" style="color: var(--text-main); font-weight: 800; font-size: 1.3rem; margin: 0; line-height: 1.5;">...</p>
         </div>
         <input type="text" id="answer-input" placeholder="اكتب كذبتك هنا...">
         <div id="truth-msg"></div>
@@ -213,7 +225,7 @@
 
     <div id="vote-screen" class="screen">
         <h2>وين الحقيقة؟ 🤔</h2>
-        <div id="vote-options" style="width:100%; margin-top:10px; margin-bottom: 10px;"></div>
+        <div id="vote-options" style="width:100%; margin-top:20px; margin-bottom: 20px;"></div>
         <div id="vote-players-footer" class="game-footer"></div>
     </div>
     
@@ -489,6 +501,21 @@
             bar.style.transition = `width ${data.time}s linear`; bar.style.width = '0%';
             if(data.time > 5) timerSoundTimeout = setTimeout(() => playSound('timer'), (data.time-5)*1000);
         }, 100);
+    });
+
+    // --- كود إضافي لحل مشكلة الكيبورد في الجوال ---
+    const inputs = document.querySelectorAll('input[type="text"], input[type="number"]');
+    inputs.forEach(input => {
+        input.addEventListener('focus', () => {
+            if(window.innerWidth < 500) {
+                // رفع الشاشة قليلاً عند الكتابة
+                document.getElementById('app-container').style.paddingBottom = "30vh";
+                setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 100);
+            }
+        });
+        input.addEventListener('blur', () => {
+            document.getElementById('app-container').style.paddingBottom = "0";
+        });
     });
 
     function submitAnswer() {
