@@ -16,6 +16,11 @@
         .screen.active { opacity: 1; pointer-events: all; transform: scale(1); z-index: 10; }
         .theme-toggle-btn { position: absolute; top: 20px; left: 20px; z-index: 100; background: rgba(255,255,255,0.2); border: none; font-size: 1.5rem; cursor: pointer; padding: 10px; border-radius: 50%; transition: 0.3s; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .theme-toggle-btn:hover { transform: scale(1.1); background: rgba(255,255,255,0.4); }
+        
+        /* زر الخروج الجديد */
+        .exit-btn { position: absolute; top: 20px; right: 20px; z-index: 100; background: #ff7675; color: white; border: none; font-size: 1.2rem; cursor: pointer; padding: 10px 15px; border-radius: 15px; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-weight: bold; display: none; }
+        .exit-btn:hover { transform: scale(1.1); background: #d63031; }
+
         .avatar-preview-box { width: 260px; height: 280px; background: #f0f3ff; border-radius: 30px; border: 4px solid var(--primary); display: flex; justify-content: center; align-items: center; margin-bottom: 20px; overflow: visible; box-shadow: inset 0 0 15px rgba(0,0,0,0.05); }
         .avatar-preview-box svg { width: 100%; height: 100%; filter: drop-shadow(0 8px 12px rgba(0,0,0,0.15)); }
         .home-avatar-box { width: 180px; height: 200px; margin: 20px auto; display: flex; justify-content: center; align-items: center; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.2)); }
@@ -52,13 +57,11 @@
         #truth-msg { background: #d4edda; color: #155724; padding: 10px; border-radius: 10px; margin-top: 10px; border: 1px solid #c3e6cb; display: none; font-weight: bold; }
         .mini-avatar svg { width: 35px; height: 35px; }
         
-        /* شريط اللاعبين */
-        .game-footer { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 20px; width: 100%; background: rgba(255,255,255,0.5); padding: 10px; border-radius: 20px; min-height: 80px; }
+        .game-footer { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 20px; width: 100%; background: var(--card-bg); padding: 10px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.05); }
         .footer-player { display: flex; flex-direction: column; align-items: center; width: 50px; position: relative; transition: 0.3s; }
         .footer-avatar { width: 45px; height: 45px; transition: 0.3s; }
-        .footer-name { font-size: 0.8rem; color: var(--text-main); font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; }
-        .status-check { position: absolute; top: -5px; right: -5px; background: var(--success); color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 14px; display: none; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        /* عند الإجابة */
+        .footer-name { font-size: 0.8rem; color: var(--text-main); font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; margin-top: 2px; }
+        .status-check { position: absolute; top: -5px; right: -5px; background: var(--success); color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 14px; display: none; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 5; }
         .footer-player.done .status-check { display: flex; }
         .footer-player.done .footer-avatar { opacity: 0.6; transform: scale(0.9); filter: grayscale(50%); }
     </style>
@@ -67,6 +70,7 @@
 
 <div id="app-container">
     <button class="theme-toggle-btn" onclick="toggleTheme()" title="تغيير المظهر">🌓</button>
+    <button class="exit-btn" onclick="leaveGame()" title="خروج من اللعبة">🚪</button>
 
     <div id="home-screen" class="screen active">
         <h1>جاطت 🎲</h1>
@@ -74,6 +78,7 @@
         <button class="btn btn-primary" onclick="showScreen('screen-avatar')">🎨 صمم شخصيتك</button>
         <button class="btn btn-secondary" onclick="goToSetup()">🔒 إنشاء غرفة</button>
         <button class="btn btn-outline" onclick="showJoinCode()">🔑 دخول برمز</button>
+        <p id="reconnect-msg" style="display:none; color:var(--primary); margin-top:10px;">جاري استعادة اللعبة... ⏳</p>
     </div>
 
     <div id="screen-avatar" class="screen">
@@ -119,12 +124,10 @@
         <div id="truth-msg"></div>
         <div id="wait-msg-game" style="display:none; color:var(--text-main); margin-top:10px;">تم الإرسال.. بانتظار البقية ⏳</div>
         <button id="submit-ans-btn" class="btn btn-primary" style="margin-top: 15px;" onclick="submitAnswer()">إرسال</button>
-        
         <div id="game-players-footer" class="game-footer"></div>
     </div>
 
     <div id="vote-screen" class="screen">
-        <div class="timer-bar" id="vote-timer"></div>
         <h2>وين الحقيقة؟ 🤔</h2>
         <div id="vote-options" style="width:100%; margin-top:20px;"></div>
         <div id="vote-players-footer" class="game-footer"></div>
@@ -159,7 +162,7 @@
 
     // === SVG Generator ===
     const colors = ['#FF9F43', '#54a0ff', '#5f27cd', '#ff6b6b', '#1dd1a1', '#feca57', '#fd79a8', '#00cec9', '#6D214F', '#2d3436', '#badc58'];
-    const avatarConfig = { color: 0, face: 0, hat: 0 };
+    let avatarConfig = { color: 0, face: 0, hat: 0 };
     const hats = [ `<g transform="translate(50, -5) scale(1.1)"><path d="M-35 20 Q-45 5 -25 0" stroke="#3d3d3d" stroke-width="3" fill="#f1f2f6"/><path d="M35 20 Q45 5 25 0" stroke="#3d3d3d" stroke-width="3" fill="#f1f2f6"/><path d="M-25 30 Q-25 5 0 5 Q25 5 25 30" fill="#cd6133" stroke="#3d3d3d" stroke-width="3"/><path d="M-28 30 L28 30 L28 35 L-28 35 Z" fill="#b2bec3" stroke="#3d3d3d" stroke-width="3"/><path d="M-5 35 L-5 5 L5 5 L5 35 Z" fill="#b2bec3" stroke="#3d3d3d" stroke-width="3"/></g>`, ``, `<g transform="translate(50, -10)"><path d="M-20 25 L-20 5 L-10 20 L0 5 L10 20 L20 5 L20 25 Z" fill="#feca57" stroke="#3d3d3d" stroke-width="3"/></g>`, `<g transform="translate(50, -15)"><rect x="-2" y="0" width="4" height="15" fill="#1dd1a1" stroke="#3d3d3d" stroke-width="2"/><circle cx="5" cy="20" r="10" fill="#ff6b6b" stroke="#3d3d3d" stroke-width="3"/><circle cx="-5" cy="22" r="10" fill="#ff6b6b" stroke="#3d3d3d" stroke-width="3"/></g>`, `<g transform="translate(50, -10)"><path d="M-25 25 L25 25 L30 15 L-30 15 Z" fill="#2d3436" stroke="#3d3d3d" stroke-width="3"/><path d="M-25 15 Q-25 -5 0 -5 Q25 -5 25 15" fill="#0984e3" stroke="#3d3d3d" stroke-width="3"/><circle cx="0" cy="10" r="5" fill="#feca57"/></g>`, `<g transform="translate(50, -20)"><rect x="-25" y="20" width="50" height="5" fill="#2d3436" stroke="#3d3d3d"/><path d="M-15 20 L-10 -10 L10 -10 L15 20 Z" fill="#2d3436" stroke="#3d3d3d" stroke-width="2"/><rect x="-15" y="15" width="30" height="5" fill="#d63031"/></g>`, `<g transform="translate(50, -10)"><path d="M-35 15 Q0 25 35 15 L30 5 Q0 10 -30 5 Z" fill="#8B4513" stroke="#3d3d3d" stroke-width="2"/><rect x="-15" y="0" width="30" height="15" fill="#8B4513" stroke="#3d3d3d"/><rect x="-15" y="10" width="30" height="5" fill="#6D214F"/></g>`, `<g transform="translate(50, 0)"><path d="M-30 30 Q-30 -10 30 30" fill="none" stroke="#3d3d3d" stroke-width="6"/><rect x="-38" y="20" width="12" height="25" rx="5" fill="#74b9ff" stroke="#3d3d3d" stroke-width="2"/><rect x="26" y="20" width="12" height="25" rx="5" fill="#74b9ff" stroke="#3d3d3d" stroke-width="2"/></g>`, `<g transform="translate(50, -15)"><path d="M0 20 Q5 5 15 0 Q5 5 0 20 Q-5 5 -15 0 Q-5 5 0 20" fill="#badc58" stroke="#3d3d3d" stroke-width="2"/><rect x="-8" y="20" width="16" height="12" fill="#e17055" stroke="#3d3d3d" stroke-width="2"/></g>` ];
     const faces = [ `<g transform="translate(50, 35)"><path d="M-20 0 Q-10 10 0 0 Z" fill="white" stroke="#3d3d3d" stroke-width="2.5" transform="translate(-10, 0) scale(1.5)"/><path d="M-20 0 Q-10 10 0 0 Z" fill="white" stroke="#3d3d3d" stroke-width="2.5" transform="translate(25, 0) scale(1.5) flip"/><circle cx="-18" cy="3" r="2" fill="black"/><circle cx="18" cy="3" r="2" fill="black"/><path d="M-15 20 L-10 15 L-5 20 L0 15 L5 20 L10 15 L15 20" fill="none" stroke="#3d3d3d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>`, `<g transform="translate(50, 40)"><circle cx="-15" cy="0" r="4" fill="black"/><circle cx="15" cy="0" r="4" fill="black"/><path d="M-5 10 Q0 15 5 10" fill="none" stroke="black" stroke-width="3" stroke-linecap="round"/></g>`, `<g transform="translate(50, 40)"><circle cx="-15" cy="0" r="3" fill="black"/><circle cx="15" cy="0" r="3" fill="black"/><ellipse cx="0" cy="15" rx="5" ry="8" fill="black"/></g>`, `<g transform="translate(50, 40)"><path d="M-25 -5 L-5 -5 L-5 5 L-20 10 Z" fill="black"/><path d="M25 -5 L5 -5 L5 5 L20 10 Z" fill="black"/><rect x="-5" y="-3" width="10" height="2" fill="black"/><path d="M-10 15 Q0 20 10 15" fill="none" stroke="black" stroke-width="3"/></g>`, `<g transform="translate(50, 40)"><path d="M-20 0 L-10 -5 L0 0" fill="none" stroke="black" stroke-width="3"/><path d="M0 0 L10 -5 L20 0" fill="none" stroke="black" stroke-width="3"/><path d="M-10 15 Q0 25 10 15" fill="none" stroke="black" stroke-width="3"/></g>`, `<g transform="translate(50, 42)"><circle cx="-15" cy="-5" r="3" fill="black"/><circle cx="15" cy="-5" r="3" fill="black"/><path d="M-5 10 Q-15 10 -20 0 Q-10 5 0 10 Q10 5 20 0 Q15 10 5 10 Z" fill="#2d3436" stroke="black" stroke-width="1"/></g>`, `<g transform="translate(50, 38)"><circle cx="0" cy="5" r="14" fill="white" stroke="black" stroke-width="2"/><circle cx="0" cy="5" r="6" fill="black"/><path d="M-8 25 Q0 20 8 25" fill="none" stroke="black" stroke-width="3"/></g>`, `<g transform="translate(50, 40)"><circle cx="-15" cy="0" r="3" fill="black"/><circle cx="15" cy="0" r="3" fill="black"/><path d="M-15 5 L-15 15" stroke="#74b9ff" stroke-width="3"/><path d="M15 5 L15 15" stroke="#74b9ff" stroke-width="3"/><path d="M-8 20 Q0 15 8 20" fill="none" stroke="black" stroke-width="3"/></g>` ];
 
@@ -176,8 +179,7 @@
         if(homeAvatar) homeAvatar.innerHTML = generateSVG(avatarConfig);
     }
     function changeConfig(type) { if(type === 'color') avatarConfig.color++; if(type === 'face') avatarConfig.face++; if(type === 'hat') avatarConfig.hat++; renderEditor(); }
-    function saveAvatarAndGoHome() { const name = document.getElementById('player-name-input').value; if(!name) return alert("اكتب اسمك!"); myName = name; goHome(); }
-
+    
     // === Game Logic ===
     const socket = io();
     const sounds = { click: new Audio('sounds/click.mp3'), join: new Audio('sounds/join.mp3'), start: new Audio('sounds/start.mp3'), win: new Audio('sounds/win.mp3'), lose: new Audio('sounds/lose.mp3'), cheer: new Audio('sounds/cheer.mp3'), timer: new Audio('sounds/timer.mp3') };
@@ -186,60 +188,135 @@
 
     let currentRoomCode = null, myName = '', amIHost = false, timerSoundTimeout;
     let allPlayersData = [];
-
     const allTopics = [ {id:'football', label:'كرة قدم', icon:'⚽'}, {id:'weird', label:'غريبة', icon:'🤪'}, {id:'science', label:'علوم', icon:'🧪'}, {id:'geography', label:'جغرافيا', icon:'🌍'}, {id:'history', label:'تاريخ', icon:'📜'}, {id:'anime', label:'أنمي', icon:'🍜'}, {id:'movies', label:'أفلام', icon:'🎬'}, {id:'tech', label:'تكنولوجيا', icon:'💻'}, {id:'animals', label:'حيوانات', icon:'🦁'}, {id:'flags', label:'أعلام', icon:'🏁'} ];
     let selectedTopics = [];
 
-    // === حفظ البيانات محلياً ===
-    function saveLocalData(code, name, config) {
-        localStorage.setItem('jat_room', code);
-        localStorage.setItem('jat_name', name);
-        localStorage.setItem('jat_config', JSON.stringify(config));
+    // --- RECOVERY LOGIC ---
+    window.addEventListener('load', () => {
+        const savedName = sessionStorage.getItem('player_name');
+        const savedAvatar = sessionStorage.getItem('avatar_config');
+        const savedRoom = sessionStorage.getItem('room_code');
+        
+        if (savedName) {
+            myName = savedName;
+            document.getElementById('player-name-input').value = myName;
+        }
+        if (savedAvatar) {
+            avatarConfig = JSON.parse(savedAvatar);
+        }
+        renderEditor();
+
+        if (savedRoom && savedName) {
+            document.getElementById('reconnect-msg').style.display = 'block';
+            setTimeout(() => {
+                socket.emit('rejoin_game', { roomCode: savedRoom, name: savedName, avatarConfig });
+            }, 500);
+        }
+    });
+
+    socket.on('rejoin_success', (stateData) => {
+        document.getElementById('reconnect-msg').style.display = 'none';
+        currentRoomCode = stateData.roomCode;
+        myName = stateData.name;
+        amIHost = stateData.isHost;
+        allPlayersData = stateData.players;
+        
+        restoreGameState(stateData);
+    });
+
+    // دالة مساعدة لإنشاء شريط اللاعبين لتجنب تكرار الكود
+    function renderFooterPlayers(containerId, players, doneIds = []) {
+        const footer = document.getElementById(containerId);
+        if (!footer) return;
+        footer.innerHTML = '';
+        players.forEach(p => {
+            const svg = generateSVG(p.avatarConfig || {color:0});
+            const isDone = doneIds.includes(p.id) ? 'done' : '';
+            footer.innerHTML += `
+            <div class="footer-player ${isDone}" id="${containerId}-fp-${p.id}" data-pid="${p.id}">
+                <div class="footer-avatar mini-avatar">${svg}</div>
+                <div class="status-check">✔</div>
+                <div class="footer-name">${p.name}</div>
+            </div>`;
+        });
     }
 
-    // === عند تحميل الصفحة: محاولة إعادة الاتصال ===
-    window.onload = function() {
-        const savedCode = localStorage.getItem('jat_room');
-        const savedName = localStorage.getItem('jat_name');
-        const savedConfig = localStorage.getItem('jat_config');
-        if(savedConfig) {
-            const conf = JSON.parse(savedConfig);
-            avatarConfig.color = conf.color; avatarConfig.face = conf.face; avatarConfig.hat = conf.hat;
-            renderEditor();
-        }
-        
-        if(savedCode && savedName) {
-            // محاولة الانضمام مرة أخرى
-            socket.emit('rejoin_game', { roomCode: savedCode, name: savedName });
-        }
-    };
-
-    socket.on('reset_client', () => {
-        localStorage.clear();
-        goHome();
+    // تحديث القائمة إذا خرج لاعب أثناء اللعب
+    socket.on('player_left_update', (updatedPlayers) => {
+        allPlayersData = updatedPlayers;
+        renderFooterPlayers('game-players-footer', allPlayersData);
+        renderFooterPlayers('vote-players-footer', allPlayersData);
     });
 
-    socket.on('recover_state', (data) => {
-        myName = data.player.name;
-        currentRoomCode = localStorage.getItem('jat_room');
-        allPlayersData = data.playersList;
-        amIHost = (socket.id === data.hostId);
-
-        if(data.gameState === 'lobby') {
+    function restoreGameState(data) {
+        if (data.gameState === 'lobby') {
             showScreen('lobby-screen');
-            document.getElementById('room-code-display').innerText = currentRoomCode;
-            updateLobbyUI(data.playersList);
-        } else if(data.gameState === 'input') {
-            setupGameScreen(data.currentRoundData.question, data.currentRoundData.time);
-            // تحديث حالة من أجاب
-            data.playersList.forEach(p => { if(p.hasAnswered) markPlayerDone(p.id); });
-        } else if(data.gameState === 'voting') {
-            setupVotingScreen(data.currentRoundData.options, data.currentRoundData.time);
-            data.playersList.forEach(p => { if(p.hasVoted) markPlayerDone(p.id); });
-        }
-    });
+            updateLobbyUI({ code: data.roomCode, players: data.players, hostId: data.hostId });
+        } else if (data.gameState === 'picking_topic') {
+            showScreen('topic-screen');
+            handleTopicPhase(data.topicData);
+        } else if (data.gameState === 'input') {
+            showScreen('game-screen');
+            const qData = data.questionData;
+            document.getElementById('question-text').innerHTML = qData.question;
+            const inputField = document.getElementById('answer-input');
+            inputField.value = '';
+            if(qData.inputType === 'number') { inputField.type = 'number'; inputField.placeholder = "أدخل رقم..."; } 
+            else { inputField.type = 'text'; inputField.placeholder = "اكتب كذبتك هنا..."; }
+            
+            // استعادة حالة الفوتر (من جاوب ومن لم يجاوب)
+            renderFooterPlayers('game-players-footer', data.players, data.donePlayers);
 
-    function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+            if (data.hasAnswered) {
+                document.getElementById('wait-msg-game').style.display='block'; 
+                document.getElementById('submit-ans-btn').style.display='none';
+            } else {
+                document.getElementById('wait-msg-game').style.display = 'none';
+                document.getElementById('submit-ans-btn').style.display = 'block';
+            }
+        } else if (data.gameState === 'voting') {
+            showScreen('vote-screen');
+            renderVotingOptions(data.voteOptions);
+            // استعادة حالة المصوتين
+            renderFooterPlayers('vote-players-footer', data.players, data.votedPlayers);
+        } else if (data.gameState === 'results') {
+            showResultsUI(data.resultData);
+        }
+    }
+
+    function saveSessionData() {
+        sessionStorage.setItem('room_code', currentRoomCode);
+        sessionStorage.setItem('player_name', myName);
+        sessionStorage.setItem('avatar_config', JSON.stringify(avatarConfig));
+    }
+
+    function clearSessionData() {
+        sessionStorage.removeItem('room_code');
+    }
+
+    function saveAvatarAndGoHome() { 
+        const name = document.getElementById('player-name-input').value; 
+        if(!name) return alert("اكتب اسمك!"); 
+        myName = name; 
+        sessionStorage.setItem('player_name', myName);
+        sessionStorage.setItem('avatar_config', JSON.stringify(avatarConfig));
+        goHome(); 
+    }
+    // -----------------------------
+
+    function showScreen(id) { 
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); 
+        document.getElementById(id).classList.add('active'); 
+        
+        // التحكم بزر الخروج
+        const exitBtn = document.querySelector('.exit-btn');
+        if (id === 'home-screen' || id === 'screen-avatar' || id === 'name-input-screen') {
+            if(exitBtn) exitBtn.style.display = 'none';
+        } else {
+            if(exitBtn) exitBtn.style.display = 'block';
+        }
+    }
+
     function goHome() { showScreen('home-screen'); renderEditor(); }
     function joinPublic() { showScreen('name-input-screen'); }
     function goToSetup() { if(!myName) return alert("صمم شخصيتك أولاً!"); showScreen('setup-screen'); }
@@ -257,40 +334,41 @@
     }
     function showJoinCode() { if(!myName) return alert("صمم شخصيتك!"); let code = prompt("الكود:"); if(code) socket.emit('join_room', { code, name: myName, avatarConfig }); }
 
+    // Socket
     socket.on('go_to_setup', (code) => { 
         currentRoomCode = code; 
-        saveLocalData(code, myName, avatarConfig);
+        saveSessionData(); 
         socket.emit('save_settings', { roomCode: code, settings: { rounds: document.getElementById('rounds-setting').value, time: document.getElementById('time-setting').value, maxPlayers: document.getElementById('max-players').value, topics: selectedTopics } }); 
     });
 
-    socket.on('update_lobby', (data) => {
-        if(data.players.length > document.getElementById('lobby-players').children.length) playSound('join');
+    socket.on('update_lobby', (data) => updateLobbyUI(data));
+
+    function updateLobbyUI(data) {
+        if(document.getElementById('lobby-players').children.length < data.players.length) playSound('join');
         currentRoomCode = data.code; 
-        if(myName === '') { // حالة انضمام جديد
-             const me = data.players.find(p => p.id === socket.id);
-             if(me) { myName = me.name; saveLocalData(currentRoomCode, myName, me.avatarConfig); }
-        }
+        saveSessionData(); 
         showScreen('lobby-screen');
         document.getElementById('room-code-display').innerText = data.code;
-        updateLobbyUI(data.players);
-        amIHost = (socket.id === data.hostId);
-        if (amIHost) { document.getElementById('host-start-btn').style.display='block'; document.getElementById('guest-wait-msg').style.display='none'; }
-        else { document.getElementById('host-start-btn').style.display='none'; document.getElementById('guest-wait-msg').style.display='block'; }
-    });
-
-    function updateLobbyUI(players) {
         const list = document.getElementById('lobby-players'); list.innerHTML = '';
-        allPlayersData = players;
-        players.forEach(p => {
+        amIHost = (socket.id === data.hostId || (data.players.find(p=>p.id===socket.id) && data.players.find(p=>p.id===socket.id).isHost));
+        allPlayersData = data.players;
+        data.players.forEach(p => {
             const svg = generateSVG(p.avatarConfig || {color:0});
             list.innerHTML += `<div class="player-chip"><div style="display:flex; align-items:center; gap:10px;"><div class="mini-avatar">${svg}</div><span>${p.name} ${p.isHost?'👑':''}</span></div></div>`;
         });
+        if (amIHost) { document.getElementById('host-start-btn').style.display='block'; document.getElementById('guest-wait-msg').style.display='none'; }
+        else { document.getElementById('host-start-btn').style.display='none'; document.getElementById('guest-wait-msg').style.display='block'; }
     }
 
     function startGameFlow() { socket.emit('start_game_flow', currentRoomCode); }
 
     socket.on('choose_topic_phase', (data) => {
-        showScreen('topic-screen'); const cont = document.getElementById('topics-container'); cont.innerHTML = '';
+        showScreen('topic-screen'); 
+        handleTopicPhase(data);
+    });
+
+    function handleTopicPhase(data) {
+        const cont = document.getElementById('topics-container'); cont.innerHTML = '';
         if (socket.id === data.chooserId) {
             document.getElementById('chooser-msg').innerText = "اختر الموضوع";
             data.availableTopics.forEach(tid => {
@@ -298,64 +376,68 @@
                 if(t) { const btn = document.createElement('div'); btn.className = 'topic-card'; btn.innerText = t.icon+' '+t.label; btn.onclick = () => socket.emit('topic_selected', { roomCode: currentRoomCode, topic: tid }); cont.appendChild(btn); }
             });
         } else document.getElementById('chooser-msg').innerText = `${data.chooserName} يختار...`;
-    });
+    }
 
     socket.on('start_round', (data) => {
-        setupGameScreen(data.question, data.time);
-    });
-
-    function setupGameScreen(question, time) {
         playSound('start'); showScreen('game-screen');
-        document.getElementById('question-text').innerText = question;
-        document.getElementById('answer-input').value = '';
+        document.getElementById('question-text').innerHTML = data.question;
+        const inputField = document.getElementById('answer-input');
+        inputField.value = '';
+        
+        if(data.inputType === 'number') {
+            inputField.type = 'number';
+            inputField.placeholder = "أدخل رقم...";
+        } else {
+            inputField.type = 'text';
+            inputField.placeholder = "اكتب كذبتك هنا...";
+        }
+
         document.getElementById('truth-msg').style.display = 'none';
         document.getElementById('wait-msg-game').style.display = 'none';
         document.getElementById('submit-ans-btn').style.display = 'block';
         
-        renderFooter('game-players-footer');
-        startTimer('game-timer', time);
-    }
+        // --- عرض اللاعبين في الأسفل ---
+        renderFooterPlayers('game-players-footer', allPlayersData);
 
-    function renderFooter(elementId) {
-        const footer = document.getElementById(elementId); footer.innerHTML = '';
-        allPlayersData.forEach(p => {
-            const svg = generateSVG(p.avatarConfig || {color:0});
-            footer.innerHTML += `<div class="footer-player" id="fp-${p.id}"><div class="footer-avatar mini-avatar">${svg}</div><div class="status-check">✔</div><div class="footer-name">${p.name}</div></div>`;
-        });
-    }
-
-    function startTimer(barId, time) {
-        const bar = document.getElementById(barId); 
-        bar.style.transition = 'none'; bar.style.width = '100%';
+        const bar = document.getElementById('game-timer'); bar.style.transition = 'none'; bar.style.width = '100%';
         clearTimeout(timerSoundTimeout); sounds.timer.pause(); sounds.timer.currentTime=0;
         setTimeout(() => {
-            bar.style.transition = `width ${time}s linear`; bar.style.width = '0%';
-            if(time > 5) timerSoundTimeout = setTimeout(() => playSound('timer'), (time-5)*1000);
+            bar.style.transition = `width ${data.time}s linear`; bar.style.width = '0%';
+            if(data.time > 5) timerSoundTimeout = setTimeout(() => playSound('timer'), (data.time-5)*1000);
         }, 100);
-    }
+    });
 
     function submitAnswer() {
         const ans = document.getElementById('answer-input').value;
         if(ans) socket.emit('submit_answer', { roomCode: currentRoomCode, answer: ans });
     }
 
-    socket.on('player_action_done', (data) => { markPlayerDone(data.id); });
-    
-    function markPlayerDone(id) {
-        const els = document.querySelectorAll(`#fp-${id}`);
-        els.forEach(el => el.classList.add('done'));
-    }
+    // --- تحديث اللاعب عندما يجاوب في مرحلة الكتابة ---
+    socket.on('player_done', (id) => { 
+        // تحديث في شاشة الكتابة
+        const elGame = document.getElementById(`game-players-footer-fp-${id}`); 
+        if(elGame) elGame.classList.add('done');
+    });
+
+    // --- تحديث اللاعب عندما يصوت في مرحلة التصويت ---
+    socket.on('player_voted', (id) => {
+        // تحديث في شاشة التصويت
+        const elVote = document.getElementById(`vote-players-footer-fp-${id}`);
+        if(elVote) elVote.classList.add('done');
+    });
 
     socket.on('truth_detected', (msg) => { playSound('win'); document.getElementById('truth-msg').innerText=msg; document.getElementById('truth-msg').style.display='block'; });
     socket.on('wait_for_others', () => { document.getElementById('wait-msg-game').style.display='block'; document.getElementById('submit-ans-btn').style.display='none'; });
 
     socket.on('voting_phase', (data) => {
-        setupVotingScreen(data.options, data.time);
-    });
-
-    function setupVotingScreen(options, time) {
         clearTimeout(timerSoundTimeout); sounds.timer.pause(); sounds.timer.currentTime=0;
         showScreen('vote-screen');
+        renderVotingOptions(data.options);
+        // عرض اللاعبين في شاشة التصويت
+        renderFooterPlayers('vote-players-footer', allPlayersData);
+    });
+
+    function renderVotingOptions(options) {
         const list = document.getElementById('vote-options'); list.innerHTML = '';
         options.forEach(opt => {
             const btn = document.createElement('button'); btn.className = 'vote-btn'; btn.innerText = opt.text;
@@ -365,17 +447,15 @@
                 btn.style.opacity='1'; btn.style.borderColor='var(--primary)'; btn.style.color='var(--primary)';
             }; list.appendChild(btn);
         });
-        
-        renderFooter('vote-players-footer');
-        startTimer('vote-timer', time);
     }
 
-    socket.on('show_results', (data) => {
+    socket.on('show_results', (data) => showResultsUI(data));
+
+    function showResultsUI(data) {
         showScreen('results-screen');
         document.getElementById('truth-display').innerText = data.truth;
         const list = document.getElementById('leaderboard-list'); list.innerHTML = '';
         let myPoints = 0;
-        allPlayersData = data.leaderboard; // تحديث النقاط
         data.leaderboard.forEach((p, i) => {
             if(p.id === socket.id) myPoints = p.lastPoints;
             const gain = p.lastPoints > 0 ? `<span style="color:var(--success)">+${p.lastPoints}</span>` : '';
@@ -389,17 +469,15 @@
         const isHostNow = (socket.id === data.hostId);
         if(isHostNow) { btn.style.display = 'block'; wait.style.display = 'none'; btn.innerText = data.isFinal ? "🔥 إعلان الفائز" : "التالي ➡"; btn.onclick = () => socket.emit('next_step', currentRoomCode); }
         else { btn.style.display = 'none'; wait.style.display = 'block'; wait.innerText = data.isFinal ? "بانتظار النتائج..." : "بانتظار المضيف..."; }
-    });
+    }
 
     socket.on('game_over', (data) => {
+        clearSessionData();
         playSound('cheer'); showScreen('gameover-screen');
         confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
         document.getElementById('winner-name').innerText = data.winner.name;
         document.getElementById('winner-score').innerText = `${data.winner.score} نقطة`;
         document.getElementById('winner-avatar-display').innerHTML = generateSVG(data.winner.avatarConfig || {color:0});
-        
-        localStorage.clear(); // مسح البيانات عند النهاية
-
         const rBtn = document.getElementById('restart-btn');
         const wMsg = document.getElementById('gameover-wait-msg');
         const isHostNow = (socket.id === data.hostId);
@@ -408,8 +486,26 @@
     });
 
     function restartGame() { socket.emit('restart_game', currentRoomCode); }
-    function exitGame() { location.reload(); }
+    
+    // --- دالة الخروج الجديدة ---
+    function leaveGame() {
+        if(!currentRoomCode) return goHome(); 
+
+        if(confirm("هل أنت متأكد من الخروج؟ سيتم حذفك من اللعبة.")) {
+            socket.emit('leave_game', currentRoomCode);
+            sessionStorage.removeItem('room_code');
+            currentRoomCode = null;
+            document.querySelector('.exit-btn').style.display = 'none';
+            location.reload();
+        }
+    }
+
+    function exitGame() { 
+        sessionStorage.removeItem('room_code');
+        location.reload(); 
+    }
     socket.on('error_msg', msg => alert(msg));
+    
     renderEditor();
 </script>
 </body>
