@@ -293,7 +293,7 @@
         <div id="leaderboard-list" class="lobby-list" style="flex-grow:1; width:100%;"></div>
         
         <div class="btn-container">
-            <button id="next-round-btn" class="btn btn-primary" style="display:none;" onclick="nextStep()">الجولة التالية ➡</button>
+            <button id="next-round-btn" class="btn btn-primary" style="display:none;" onclick="socket.emit('next_step', currentRoomCode)">الجولة التالية ➡</button>
             <p id="waiting-host-msg" style="display:none; color:var(--text-main); text-align:center;">بانتظار المضيف...</p>
         </div>
     </div>
@@ -336,13 +336,13 @@
     const faces = [ `<g transform="translate(50, 35)"><path d="M-20 0 Q-10 10 0 0 Z" fill="white" stroke="#3d3d3d" stroke-width="2.5" transform="translate(-10, 0) scale(1.5)"/><path d="M-20 0 Q-10 10 0 0 Z" fill="white" stroke="#3d3d3d" stroke-width="2.5" transform="translate(25, 0) scale(1.5) flip"/><circle cx="-18" cy="3" r="2" fill="black"/><circle cx="18" cy="3" r="2" fill="black"/><path d="M-15 20 L-10 15 L-5 20 L0 15 L5 20 L10 15 L15 20" fill="none" stroke="#3d3d3d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>`, `<g transform="translate(50, 40)"><circle cx="-15" cy="0" r="4" fill="black"/><circle cx="15" cy="0" r="4" fill="black"/><path d="M-5 10 Q0 15 5 10" fill="none" stroke="black" stroke-width="3" stroke-linecap="round"/></g>`, `<g transform="translate(50, 40)"><circle cx="-15" cy="0" r="3" fill="black"/><circle cx="15" cy="0" r="3" fill="black"/><ellipse cx="0" cy="15" rx="5" ry="8" fill="black"/></g>`, `<g transform="translate(50, 40)"><path d="M-25 -5 L-5 -5 L-5 5 L-20 10 Z" fill="black"/><path d="M25 -5 L5 -5 L5 5 L20 10 Z" fill="black"/><rect x="-5" y="-3" width="10" height="2" fill="black"/><path d="M-10 15 Q0 20 10 15" fill="none" stroke="black" stroke-width="3"/></g>`, `<g transform="translate(50, 40)"><path d="M-20 0 L-10 -5 L0 0" fill="none" stroke="black" stroke-width="3"/><path d="M0 0 L10 -5 L20 0" fill="none" stroke="black" stroke-width="3"/><path d="M-10 15 Q0 25 10 15" fill="none" stroke="black" stroke-width="3"/></g>`, `<g transform="translate(50, 42)"><circle cx="-15" cy="-5" r="3" fill="black"/><circle cx="15" cy="-5" r="3" fill="black"/><path d="M-5 10 Q-15 10 -20 0 Q-10 5 0 10 Q10 5 20 0 Q15 10 5 10 Z" fill="#2d3436" stroke="black" stroke-width="1"/></g>`, `<g transform="translate(50, 38)"><circle cx="0" cy="5" r="14" fill="white" stroke="black" stroke-width="2"/><circle cx="0" cy="5" r="6" fill="black"/><path d="M-8 25 Q0 20 8 25" fill="none" stroke="black" stroke-width="3"/></g>`, `<g transform="translate(50, 40)"><circle cx="-15" cy="0" r="3" fill="black"/><circle cx="15" cy="0" r="3" fill="black"/><path d="M-15 5 L-15 15" stroke="#74b9ff" stroke-width="3"/><path d="M15 5 L15 15" stroke="#74b9ff" stroke-width="3"/><path d="M-8 20 Q0 15 8 20" fill="none" stroke="black" stroke-width="3"/></g>` ];
 
     function generateSVG(config) {
+        config = config || {color:0, face:0, hat:0};
         const color = colors[config.color % colors.length];
         const hat = hats[config.hat % hats.length] || '';
         const face = faces[config.face % faces.length];
         return `<svg viewBox="0 -30 100 150" xmlns="http://www.w3.org/2000/svg"><g transform="translate(0, 10)"><ellipse cx="50" cy="95" rx="30" ry="8" fill="rgba(0,0,0,0.15)" /><path d="M18 60 Q10 70 12 80 Q15 85 25 75" fill="${color}" stroke="#3d3d3d" stroke-width="3"/><path d="M82 60 Q90 70 88 80 Q85 85 75 75" fill="${color}" stroke="#3d3d3d" stroke-width="3"/><path d="M 25 30 Q 25 0 50 0 Q 75 0 75 30 L 75 70 Q 75 90 65 90 L 60 90 L 60 105 Q 60 110 50 110 Q 40 110 40 105 L 40 90 L 35 90 Q 25 90 25 70 Z" fill="${color}" stroke="#3d3d3d" stroke-width="3" stroke-linejoin="round"/><ellipse cx="50" cy="45" rx="22" ry="18" fill="#ffdbac" stroke="#3d3d3d" stroke-width="0"/>${face}${hat}</g></svg>`;
     }
 
-    // === Global Vars ===
     const socket = io();
     const sounds = { click: new Audio('sounds/click.mp3'), join: new Audio('sounds/join.mp3'), start: new Audio('sounds/start.mp3'), win: new Audio('sounds/win.mp3'), lose: new Audio('sounds/lose.mp3'), cheer: new Audio('sounds/cheer.mp3'), timer: new Audio('sounds/timer.mp3'), msg: new Audio('sounds/click.mp3') };
     function playSound(name) { if(sounds[name]) { sounds[name].currentTime=0; sounds[name].play().catch(e=>{}); } }
@@ -351,11 +351,10 @@
     let currentRoomCode = null, myName = '', amIHost = false, timerSoundTimeout;
     let allPlayersData = [];
     let isEditingFromProfile = false;
-
-    // === PROFILE SYSTEM ===
     let userStats = { wins: 0, totalPoints: 0, gamesPlayed: 0, level: 1, bio: "" };
     let myCurrentSessionScore = 0;
 
+    // === Stats Logic ===
     function loadStats() {
         const saved = localStorage.getItem('jatt_stats');
         if (saved) userStats = JSON.parse(saved);
@@ -390,29 +389,19 @@
         myName = name; 
         sessionStorage.setItem('player_name', myName);
         sessionStorage.setItem('avatar_config', JSON.stringify(avatarConfig));
-        
-        // تحديث زر الهوم
         renderEditor();
-
-        if(isEditingFromProfile) {
-            isEditingFromProfile = false;
-            showProfile();
-        } else {
-            goHome();
-        }
+        if(isEditingFromProfile) { isEditingFromProfile = false; showProfile(); } else { goHome(); }
     }
 
     function renderEditor() {
         document.getElementById('avatar-editor-preview').innerHTML = generateSVG(avatarConfig);
         const homeAvatar = document.getElementById('my-avatar-home');
         if(homeAvatar) homeAvatar.innerHTML = generateSVG(avatarConfig);
-        
-        // تحديث زر الهوم الدائري
         document.getElementById('home-btn-avatar').innerHTML = generateSVG(avatarConfig);
     }
     function changeConfig(type) { if(type === 'color') avatarConfig.color++; if(type === 'face') avatarConfig.face++; if(type === 'hat') avatarConfig.hat++; renderEditor(); }
 
-    // === TOPICS ===
+    // === Topics Data ===
     const allTopics = [
         {id:'sudanese', label:'سودانيات', icon:'🇸🇩'}, {id:'football', label:'كرة قدم', icon:'⚽'}, {id:'movies', label:'افلام', icon:'🎬'},
         {id:'history', label:'تاريخ', icon:'📜'}, {id:'science', label:'علوم', icon:'🧪'}, {id:'geography', label:'جغرافيا', icon:'🌍'},
@@ -423,48 +412,30 @@
     ];
     let selectedTopics = [];
 
-    // === STARTUP & RECOVERY ===
+    // === Initialization ===
     window.addEventListener('load', () => {
         loadStats();
         const savedName = sessionStorage.getItem('player_name');
         const savedAvatar = sessionStorage.getItem('avatar_config');
         const savedRoom = sessionStorage.getItem('room_code');
-        
         if (savedName) { myName = savedName; document.getElementById('player-name-input').value = myName; }
         if (savedAvatar) { avatarConfig = JSON.parse(savedAvatar); }
-        
         renderEditor();
-
-        // إظهار زر البروفايل في الهوم فقط
         document.getElementById('home-profile-btn').style.display = 'block';
-
         if (savedRoom && savedName) {
             document.getElementById('reconnect-msg').style.display = 'block';
             setTimeout(() => socket.emit('rejoin_game', { roomCode: savedRoom, name: savedName, avatarConfig }), 500);
         }
     });
 
-    // === NAVIGATION ===
     function showScreen(id) { 
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); 
         document.getElementById(id).classList.add('active'); 
-        
-        // إدارة ظهور الأزرار العلوية
         const exitBtn = document.querySelector('.exit-btn');
         const homeProfileBtn = document.getElementById('home-profile-btn');
         const isHome = (id === 'home-screen');
-        
-        if(isHome) {
-            homeProfileBtn.style.display = 'block';
-            exitBtn.style.display = 'none';
-        } else {
-            homeProfileBtn.style.display = 'none';
-            if(id !== 'screen-avatar' && id !== 'profile-screen' && id !== 'name-input-screen' && id !== 'setup-screen' && id !== 'topics-setup-screen') {
-                exitBtn.style.display = 'block';
-            } else {
-                exitBtn.style.display = 'none';
-            }
-        }
+        if(isHome) { homeProfileBtn.style.display = 'block'; exitBtn.style.display = 'none'; } 
+        else { homeProfileBtn.style.display = 'none'; exitBtn.style.display = (id !== 'screen-avatar' && id !== 'profile-screen' && id !== 'setup-screen' && id !== 'topics-setup-screen') ? 'block' : 'none'; }
     }
 
     function goHome() { showScreen('home-screen'); renderEditor(); }
@@ -481,9 +452,18 @@
         if(selectedTopics.length === 0) return alert("اختر موضوعاً!"); 
         socket.emit('create_private_room', { name: myName, avatarConfig });
     }
-    function showJoinCode() { if(!myName) return alert("صمم شخصيتك!"); let code = prompt("الكود:"); if(code) socket.emit('join_room', { code, name: myName, avatarConfig }); }
+    
+    // === FIX 1: ShowJoinCode with Trim ===
+    function showJoinCode() { 
+        if(!myName) return alert("صمم شخصيتك!"); 
+        let code = prompt("الكود:"); 
+        if(code) {
+            // التعديل: مسح المسافات
+            code = code.trim();
+            socket.emit('join_room', { code, name: myName, avatarConfig }); 
+        }
+    }
 
-    // === SOCKET EVENTS ===
     socket.on('rejoin_success', (data) => {
         document.getElementById('reconnect-msg').style.display = 'none';
         currentRoomCode = data.roomCode; myName = data.name; amIHost = data.isHost; allPlayersData = data.players;
@@ -515,17 +495,28 @@
 
     function startGameFlow() { socket.emit('start_game_flow', currentRoomCode); }
 
-    socket.on('choose_topic_phase', (data) => {
+    // === FIX 2: Separated HandleTopicPhase Logic ===
+    function handleTopicPhase(data) {
         showScreen('topic-screen'); 
         const cont = document.getElementById('topics-container'); cont.innerHTML = '';
         if (socket.id === data.chooserId) {
             document.getElementById('chooser-msg').innerText = "دورك تختار الموضوع 🫵";
             data.availableTopics.forEach(tid => {
                 const t = allTopics.find(x => x.id === tid);
-                if(t) { const btn = document.createElement('div'); btn.className = 'topic-card'; btn.innerText = t.icon+' '+t.label; btn.onclick = () => socket.emit('topic_selected', { roomCode: currentRoomCode, topic: tid }); cont.appendChild(btn); }
+                if(t) { 
+                    const btn = document.createElement('div'); 
+                    btn.className = 'topic-card'; 
+                    btn.innerText = t.icon+' '+t.label; 
+                    btn.onclick = () => socket.emit('topic_selected', { roomCode: currentRoomCode, topic: tid }); 
+                    cont.appendChild(btn); 
+                }
             });
-        } else document.getElementById('chooser-msg').innerText = `ننتظر ${data.chooserName} يختار...`;
-    });
+        } else {
+            document.getElementById('chooser-msg').innerText = `ننتظر ${data.chooserName} يختار...`;
+        }
+    }
+
+    socket.on('choose_topic_phase', (data) => { handleTopicPhase(data); });
 
     socket.on('start_round', (data) => {
         playSound('start'); showScreen('game-screen');
@@ -533,10 +524,8 @@
         const inputField = document.getElementById('answer-input'); inputField.value = '';
         if(data.inputType === 'number') { inputField.type = 'number'; inputField.placeholder = "أدخل رقم..."; } else { inputField.type = 'text'; inputField.placeholder = "ألف كذبة مقنعة..."; }
         document.getElementById('truth-msg').style.display = 'none'; document.getElementById('wait-msg-game').style.display = 'none'; document.getElementById('submit-ans-btn').style.display = 'block';
-        
         const footer = document.getElementById('game-players-footer'); footer.innerHTML='';
         allPlayersData.forEach(p => footer.innerHTML+=`<div class="footer-player" id="game-fp-${p.id}"><div class="footer-avatar mini-avatar">${generateSVG(p.avatarConfig)}</div><div class="status-check">✔</div><div class="footer-name">${p.name}</div></div>`);
-
         const bar = document.getElementById('game-timer'); bar.style.transition = 'none'; bar.style.width = '100%';
         clearTimeout(timerSoundTimeout); sounds.timer.pause(); sounds.timer.currentTime=0;
         setTimeout(() => { bar.style.transition = `width ${data.time}s linear`; bar.style.width = '0%'; if(data.time > 5) timerSoundTimeout = setTimeout(() => playSound('timer'), (data.time-5)*1000); }, 100);
@@ -600,7 +589,6 @@
     function exitGame() { sessionStorage.removeItem('room_code'); location.reload(); }
     socket.on('error_msg', msg => alert(msg));
 
-    // === Chat ===
     function toggleChat() { document.getElementById('chat-popup').classList.toggle('open'); document.getElementById('chat-toggle-btn').classList.remove('has-new-msg'); if(document.getElementById('chat-popup').classList.contains('open')) document.getElementById('chat-input').focus(); }
     function sendChatMessage() { const inp = document.getElementById('chat-input'); if(inp.value.trim() && currentRoomCode) { socket.emit('send_chat', { roomCode: currentRoomCode, message: inp.value.trim() }); inp.value = ''; } }
     function handleChatEnter(e) { if(e.key === 'Enter') sendChatMessage(); }
@@ -613,16 +601,26 @@
     });
 
     function restoreGameState(data) {
-        if (data.gameState === 'lobby') { showScreen('lobby-screen'); updateLobbyUI({ code: data.roomCode, players: data.players, hostId: data.hostId }); }
-        else if (data.gameState === 'picking_topic') { showScreen('topic-screen'); handleTopicPhase(data.topicData); }
+        if (data.gameState === 'lobby') { showScreen('lobby-screen'); socket.emit('join_room', {code: data.roomCode, name: myName, avatarConfig}); } 
+        else if (data.gameState === 'picking_topic') { handleTopicPhase(data.topicData); }
         else if (data.gameState === 'input') {
             showScreen('game-screen'); document.getElementById('question-text').innerHTML = data.questionData.question;
             const inputField = document.getElementById('answer-input');
             if(data.questionData.inputType === 'number') { inputField.type = 'number'; inputField.placeholder = "أدخل رقم..."; } else { inputField.type = 'text'; inputField.placeholder = "ألف كذبة..."; }
             if(data.hasAnswered) { document.getElementById('wait-msg-game').style.display='block'; document.getElementById('submit-ans-btn').style.display='none'; }
-        } else if (data.gameState === 'voting') { showScreen('vote-screen'); renderVotingOptions(data.voteOptions); }
-        else if (data.gameState === 'results') { showResultsUI(data.resultData); }
+        } else if (data.gameState === 'voting') { 
+            // Reuse voting UI logic
+            showScreen('vote-screen'); 
+            const list = document.getElementById('vote-options'); list.innerHTML = '';
+            data.voteOptions.forEach(opt => {
+                const btn = document.createElement('button'); btn.className = 'vote-btn'; btn.innerText = opt.text;
+                btn.onclick = () => { socket.emit('submit_vote', { roomCode: currentRoomCode, choiceData: opt }); document.querySelectorAll('.vote-btn').forEach(b => b.style.opacity='0.5'); btn.style.opacity='1'; btn.style.borderColor='var(--primary)'; btn.style.color='var(--primary)'; };
+                list.appendChild(btn);
+            });
+         }
+        else if (data.gameState === 'results') { showScreen('results-screen'); }
     }
 </script>
 </body>
 </html>
+
