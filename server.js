@@ -6,8 +6,13 @@ const questionsData = require('./questions');
 
 const app = express();
 const server = http.createServer(app);
+
+// إعدادات CORS لتجنب مشاكل الاتصال
 const io = socketIo(server, {
-    cors: { origin: "*" } // السماح بالاتصال من أي مكان
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -18,28 +23,30 @@ const players = {};
 
 function generateRoomCode() { return Math.floor(1000 + Math.random() * 9000).toString(); }
 
-// 🔥 دالة سحرية لتوحيد الأرقام (عربي/إنجليزي) وحذف المسافات
+// توحيد الأرقام وحذف المسافات
 function normalizeCode(input) {
     if (!input) return "";
     return input.toString()
-        .replace(/[٠١٢٣٤٥٦٧٨٩]/g, d => d.charCodeAt(0) - 1632) // تحويل الأرقام العربية
-        .replace(/[۰۱۲۳٤۵۶۷۸۹]/g, d => d.charCodeAt(0) - 1776) // تحويل الأرقام الفارسية
-        .trim(); // حذف المسافات
+        .replace(/[٠١٢٣٤٥٦٧٨٩]/g, d => d.charCodeAt(0) - 1632)
+        .replace(/[۰۱۲۳٤۵۶۷۸۹]/g, d => d.charCodeAt(0) - 1776)
+        .trim();
 }
 
 io.on('connection', (socket) => {
-    console.log('New connection:', socket.id);
+    console.log('New player connected:', socket.id);
 
     // === 1. إنشاء الغرفة ===
     socket.on('create_private_room', ({ name, avatarConfig, social }) => {
-        const rawCode = generateRoomCode();
-        const roomCode = normalizeCode(rawCode); // ضمان التنسيق
+        let rawCode = generateRoomCode();
+        let roomCode = normalizeCode(rawCode);
+
+        while (rooms[roomCode]) {
+            rawCode = generateRoomCode();
+            roomCode = normalizeCode(rawCode);
+        }
 
         rooms[roomCode] = {
-            code: roomCode, 
-            hostId: socket.id, 
-            players: [], 
-            gameState: 'lobby',
+            code: roomCode, hostId: socket.id, players: [], gameState: 'lobby',
             settings: { rounds: 5, time: 30, maxPlayers: 8, topics: [] },
             currentRound: 0, scores: {}, roundData: {}, usedQuestions: [], availableChoosers: [],
             kickVotes: {} 
@@ -51,7 +58,7 @@ io.on('connection', (socket) => {
 
     // === 2. الانضمام للغرفة ===
     socket.on('join_room', ({ code, name, avatarConfig, social }) => {
-        const cleanCode = normalizeCode(code); // تنظيف الكود المدخل من اللاعب
+        const cleanCode = normalizeCode(code);
         
         console.log(`[JOIN ATTEMPT] Player ${name} trying to join ${cleanCode}`);
 
@@ -62,42 +69,55 @@ io.on('connection', (socket) => {
             joinRoom(socket, cleanCode, name, avatarConfig, social, false);
         } else {
             console.log(`[JOIN FAILED] Room ${cleanCode} not found`);
-            socket.emit('error_msg', 'الكود غلط أو الغرفة انتهت!');
+            socket.emit('error_msg', 'الكود غلط يا فنان! تأكد من الرقم.');
         }
     });
 
-    // دالة الدخول الموحدة
+    // 🔥 دالة الدخول الموحدة (معدلة لمنع تكرار الأسماء)
     function joinRoom(socket, code, name, avatarConfig, social, isHost) {
         const room = rooms[code];
-        if (!room) return; // حماية إضافية
+        if (!room) { socket.emit('error_msg', 'الغرفة غير موجودة.'); return; }
 
-        const existingPlayer = room.players.find(p => p.name === name);
+        // البحث عن لاعب بنفس الاسم
+        const existingPlayerByName = room.players.find(p => p.name === name);
+        // البحث عن لاعب بنفس الـ Socket ID (في حال الريفريش)
+        const existingPlayerById = room.players.find(p => p.id === socket.id);
 
-        if (existingPlayer) {
-            handlePlayerReconnect(socket, room, existingPlayer, avatarConfig, social);
-        } else {
-            if (room.gameState !== 'lobby') { 
-                socket.emit('error_msg', 'اللعبة بدأت بالفعل!'); 
-                return; 
-            }
-            
-            const newPlayer = {
-                id: socket.id, name: name, avatarConfig: avatarConfig, social: social || {},
-                roomCode: code, isHost: isHost, score: 0, lastPoints: 0
-            };
-            
-            players[socket.id] = newPlayer;
-            socket.join(code); // 🔥 هنا يتم ربط اللاعبين بنفس الغرفة
-            room.players.push(newPlayer);
-            room.scores[socket.id] = 0;
-            
-            console.log(`[JOIN SUCCESS] ${name} joined room ${code}`);
-            
-            // تحديث الجميع في الغرفة
-            io.to(code).emit('update_lobby', { code: code, players: room.players, hostId: room.hostId });
-            
-            if (isHost) socket.emit('go_to_setup', code);
+        // الحالة 1: اللاعب موجود بالـ ID (يعني عمل ريفريش) -> نسمح له بالدخول
+        if (existingPlayerById) {
+             handlePlayerReconnect(socket, room, existingPlayerById, avatarConfig, social);
+             return;
         }
+
+        // الحالة 2: الاسم موجود لكن الـ ID مختلف (يعني شخص آخر يحاول سرقة الاسم أو تشابه أسماء)
+        if (existingPlayerByName) {
+            // حل بسيط: نضيف رقم عشوائي للاسم تلقائياً
+            // مثال: خالد -> خالد_99
+            name = `${name}_${Math.floor(Math.random() * 100)}`;
+            socket.emit('error_msg', `الاسم مكرر! تم تغيير اسمك إلى ${name}`);
+        }
+
+        // الحالة 3: دخول جديد (أو بعد تعديل الاسم)
+        if (room.gameState !== 'lobby') { 
+            socket.emit('error_msg', 'اللعبة بدأت بالفعل!'); 
+            return; 
+        }
+        
+        const newPlayer = {
+            id: socket.id, name: name, avatarConfig: avatarConfig, social: social || {},
+            roomCode: code, isHost: isHost, score: 0, lastPoints: 0
+        };
+        
+        players[socket.id] = newPlayer;
+        socket.join(code);
+        room.players.push(newPlayer);
+        room.scores[socket.id] = 0;
+        
+        console.log(`[JOIN SUCCESS] ${name} joined room ${code}`);
+
+        // تحديث الجميع
+        io.to(code).emit('update_lobby', { code: code, players: room.players, hostId: room.hostId });
+        if (isHost) socket.emit('go_to_setup', code);
     }
 
     // === 3. الريفريش (إعادة الاتصال) ===
@@ -106,6 +126,7 @@ io.on('connection', (socket) => {
         const room = rooms[cleanCode];
 
         if (room) {
+            // في الريفريش نبحث بالاسم لأن الـ Socket ID تغير
             const existingPlayer = room.players.find(p => p.name === name);
             if (existingPlayer) {
                 handlePlayerReconnect(socket, room, existingPlayer, avatarConfig, social);
@@ -130,7 +151,7 @@ io.on('connection', (socket) => {
         
         if (player.isHost) room.hostId = socket.id;
 
-        socket.join(room.code); // إعادة الانضمام لغرفة السوكيت
+        socket.join(room.code);
 
         // نقل البيانات
         if (room.roundData) {
@@ -164,7 +185,7 @@ io.on('connection', (socket) => {
         });
     }
 
-    // === باقي منطق اللعبة (لم يتغير) ===
+    // === باقي المنطق ===
     socket.on('save_settings', ({ roomCode, settings }) => { if (rooms[roomCode]) rooms[roomCode].settings = { ...rooms[roomCode].settings, ...settings }; });
     
     socket.on('start_game_flow', (roomCode) => {
