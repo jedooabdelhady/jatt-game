@@ -1,7 +1,7 @@
 <a name="readme-top"></a>
 
 <div align="center">
-  <h1>🎲 جاطت (Jattit)</h1>
+  <h1>🎲 جاطت (Jatt)</h1>
   <p>
     <b>A Hilarious Multiplayer Bluffing & Trivia Game</b>
     <br />
@@ -29,7 +29,7 @@
 
 ## 📖 About The Project
 
-**Jattit (جاطت)** is a web-based, real-time multiplayer game designed for friends and communities. The core concept is simple: **Bluffing**.
+**Jatt (جاطت)** is a web-based, real-time multiplayer game designed for friends and communities. The core concept is simple: **Bluffing**.
 
 Players are presented with a question (Trivia, General Knowledge, etc.).
 1.  Everyone writes a **fake answer** (a lie) that looks real.
@@ -89,8 +89,8 @@ To run this project locally on your machine, follow these steps.
 
 1.  **Clone the repo**
     ```sh
-    git clone [https://github.com/your-username/jattit-game.git](https://github.com/your-username/jattit-game.git)
-    cd jattit-game
+    git clone [https://github.com/your-username/jatt-game.git](https://github.com/your-username/jatt-game.git)
+    cd jatt-game
     ```
 
 2.  **Install dependencies**
