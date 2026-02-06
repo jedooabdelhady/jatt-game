@@ -52,7 +52,9 @@
         .topic-card.selected { border-color: var(--primary); background: #f0f3ff; color: var(--primary); transform: scale(0.98); }
         .lobby-list { width: 100%; max-height: 45vh; overflow-y: auto; padding: 5px; margin-bottom: 15px; }
         .player-chip { display: flex; align-items: center; justify-content: space-between; background: var(--card-bg); color: var(--text-main); padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.03); font-weight: bold; cursor: pointer; transition: 0.2s; }
+        /* 🔥 تعديل التايمر */
         .timer-bar { position: absolute; top: 0; left: 0; width: 100%; height: 8px; background: linear-gradient(90deg, #fab1a0, #ff7675); transform-origin: left; z-index: 20; border-bottom-right-radius: 10px; border-bottom-left-radius: 10px; }
+        
         .vote-btn { width: 100%; padding: 16px; margin-bottom: 10px; background: var(--card-bg); color: var(--text-main); border: 2px solid transparent; border-radius: 18px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: 0.2s; box-shadow: 0 4px 0 #dfe6e9; } 
         .vote-btn:active { transform: translateY(4px); box-shadow: none; }
         .vote-btn:disabled { opacity: 0.5; cursor: default; transform: none; box-shadow: none; }
@@ -71,7 +73,6 @@
         .chat-header { padding: 10px 15px; background: var(--primary); color: white; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
         .chat-messages-area { flex-grow: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.02); }
         
-        /* 🔥 تنسيق الشات الجديد بالأفاتار */
         .chat-msg-row { display: flex; align-items: flex-end; margin-bottom: 12px; width: 100%; }
         .chat-msg-row.mine { flex-direction: row-reverse; } 
         .chat-msg-row.theirs { flex-direction: row; }
@@ -101,33 +102,10 @@
         .control-btn { background: var(--card-bg); color: var(--text-main); border: 2px solid #eee; padding: 12px 5px; border-radius: 12px; cursor: pointer; font-size: 1rem; font-weight: bold; transition: 0.2s; touch-action: manipulation; }
         .control-btn:active { transform: scale(0.95); background: #eee; }
 
-        /* 🔥 تعديل البروفايل لرفع الدائرة */
-        #profile-screen .card-box {
-            padding-top: 90px;
-            position: relative;
-            margin-top: 70px; 
-            overflow: visible; 
-        }
-        #profile-avatar {
-            position: absolute;
-            top: -75px; 
-            left: 50%;
-            transform: translateX(-50%);
-            width: 150px;
-            height: 150px;
-            padding: 5px;
-            border: 5px solid var(--card-bg);
-            background: var(--bg-gradient);
-            border-radius: 50%;
-            z-index: 10;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+        #profile-screen .card-box { padding-top: 90px; position: relative; margin-top: 70px; overflow: visible; }
+        #profile-avatar { position: absolute; top: -75px; left: 50%; transform: translateX(-50%); width: 150px; height: 150px; padding: 5px; border: 5px solid var(--card-bg); background: var(--bg-gradient); border-radius: 50%; z-index: 10; box-shadow: 0 10px 20px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; }
         #profile-avatar svg { width: 100%; height: 100%; }
         #profile-name-display { margin: 15px 0 5px 0; }
-        
         @media (max-width: 380px) { h1 { font-size: 2.2rem; } .btn { padding: 14px; font-size: 1rem; } .screen { padding: 15px; padding-top: 70px; } }
     </style>
 </head>
@@ -136,19 +114,15 @@
 <div id="app-container">
     <button class="top-btn theme-btn" onclick="toggleTheme()" title="تغيير المظهر">🌓</button>
     <button class="top-btn exit-btn" onclick="leaveGame()" title="خروج من اللعبة">🚪</button>
-    
     <div id="home-profile-btn" class="profile-circle-btn" onclick="showProfile()">
         <div id="home-btn-avatar" style="width:100%; height:100%;"></div>
     </div>
-
     <button id="chat-toggle-btn" onclick="toggleChat()">💬</button>
-    
     <div id="chat-popup">
         <div class="chat-header"><span>Small Chat 😜</span><span class="chat-close" onclick="toggleChat()">×</span></div>
         <div class="chat-messages-area" id="chat-msgs-box"></div>
         <div class="chat-input-area"><input type="text" id="chat-input" placeholder="اكتب شي..." onkeypress="handleChatEnter(event)"><button class="chat-send-btn" style="background:var(--primary); color:white; border:none; width:35px; height:35px; border-radius:50%; cursor:pointer;" onclick="sendChatMessage()">➤</button></div>
     </div>
-
     <div id="player-info-modal" onclick="closePlayerModal(event)">
         <div class="player-info-card">
             <div id="modal-avatar" class="home-avatar-box" style="margin: 0 auto 10px;"></div>
@@ -159,7 +133,6 @@
             <button onclick="document.getElementById('player-info-modal').classList.remove('open')" class="btn btn-outline" style="margin-top: 10px;">إغلاق</button>
         </div>
     </div>
-
     <div id="screen-reg" class="screen">
         <h2 style="font-size:2rem; margin-bottom:10px;">أهلاً بك في جاطت 👋</h2>
         <p style="margin-bottom:15px; opacity:0.7;">صمم شخصيتك عشان تدخل</p>
@@ -175,25 +148,20 @@
         </div>
         <div class="btn-container"><button class="btn btn-primary" onclick="saveRegistration()">🚀 حفظ ودخول اللعبة</button></div>
     </div>
-
     <div id="home-screen" class="screen active">
         <h1>جاطت 🎲</h1>
         <div id="my-avatar-home" class="home-avatar-box"></div>
         <div class="btn-container"><button class="btn btn-secondary" onclick="goToSetup()">🔒 إنشاء غرفة</button><button class="btn btn-outline" onclick="showJoinCode()">🔑 دخول برمز</button></div>
         <p id="reconnect-msg" style="display:none; color:var(--primary); margin-top:10px;">جاري استعادة اللعبة... ⏳</p>
     </div>
-
     <div id="profile-screen" class="screen">
         <div class="card-box">
             <div id="profile-avatar"></div>
-
             <h2 id="profile-name-display">...</h2>
             <div style="background: var(--secondary); color: white; padding: 4px 15px; border-radius: 20px; font-size: 0.9rem; margin-bottom: 15px;">مستوى <span id="profile-lvl">1</span></div>
-            
             <div class="social-input" style="margin-bottom:5px;"><i class="fab fa-instagram" style="color: #bc1888;"></i><input type="text" id="profile-insta-input" placeholder="Enter Instagram User" onblur="saveProfileData()"></div>
             <div class="social-input" style="margin-bottom:15px;"><i class="fab fa-snapchat-ghost" style="color: #FFFC00; text-shadow: 0 0 2px #000;"></i><input type="text" id="profile-snap-input" placeholder="Enter Snap User" onblur="saveProfileData()"></div>
             <div class="input-group" style="margin-bottom:10px;"><textarea id="profile-bio" placeholder="...Bio" onblur="saveProfileData()"></textarea></div>
-            
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
                 <div style="background: var(--input-bg); padding: 10px; border-radius: 10px;"><div style="font-size: 0.8rem; color: #888;">عدد الفوز 🏆</div><div id="profile-wins" style="font-size: 1.2rem; font-weight: bold; color: var(--success);">0</div></div>
                 <div style="background: var(--input-bg); padding: 10px; border-radius: 10px;"><div style="font-size: 0.8rem; color: #888;">مجموع النقاط ⭐</div><div id="profile-points" style="font-size: 1.2rem; font-weight: bold; color: var(--primary);">0</div></div>
@@ -201,7 +169,6 @@
         </div>
         <div class="btn-container"><button class="btn btn-primary" onclick="goToEditVisuals()">✏️ تعديل شكل الشخصية</button><button class="btn btn-outline" onclick="goHome()">رجوع</button></div>
     </div>
-
     <div id="screen-edit-visuals" class="screen">
         <h2>نيو لوك ✨</h2>
         <div class="avatar-preview-box" id="edit-avatar-preview"></div>
@@ -213,7 +180,6 @@
         </div>
         <div class="btn-container"><button class="btn btn-primary" onclick="saveVisualsAndReturn()">حفظ ✅</button></div>
     </div>
-
     <div id="name-input-screen" class="screen"><h2>من أنت؟</h2><div class="input-group"><input type="text" id="public-name" placeholder="..."></div><button class="btn btn-outline" onclick="goHome()">رجوع</button></div>
     <div id="setup-screen" class="screen">
         <h2>إعدادات جاطت ⚙️</h2>
@@ -536,7 +502,49 @@
     function startGameFlow() { socket.emit('start_game_flow', currentRoomCode); }
     socket.on('choose_topic_phase', (data) => { showScreen('topic-screen'); handleTopicPhase(data); });
     function handleTopicPhase(data) { const cont = document.getElementById('topics-container'); cont.innerHTML = ''; if (socket.id === data.chooserId) { document.getElementById('chooser-msg').innerText = "اختر الموضوع"; data.availableTopics.forEach(tid => { const t = allTopics.find(x => x.id === tid); if(t) { const btn = document.createElement('div'); btn.className = 'topic-card'; btn.innerText = t.icon+' '+t.label; btn.onclick = () => socket.emit('topic_selected', { roomCode: currentRoomCode, topic: tid }); cont.appendChild(btn); } }); } else document.getElementById('chooser-msg').innerText = `${data.chooserName} يختار...`; }
-    socket.on('start_round', (data) => { playSound('start'); showScreen('game-screen'); document.getElementById('question-text').innerHTML = data.question; const inputField = document.getElementById('answer-input'); inputField.value = ''; if(data.inputType === 'number') { inputField.type = 'number'; inputField.placeholder = "أدخل رقم..."; } else { inputField.type = 'text'; inputField.placeholder = "اكتب كذبتك هنا..."; } document.getElementById('truth-msg').style.display = 'none'; document.getElementById('wait-msg-game').style.display = 'none'; document.getElementById('submit-ans-btn').style.display = 'block'; renderFooterPlayers('game-players-footer', allPlayersData); const bar = document.getElementById('game-timer'); bar.style.transition = 'none'; bar.style.width = '100%'; clearTimeout(timerSoundTimeout); sounds.timer.pause(); sounds.timer.currentTime=0; setTimeout(() => { bar.style.transition = `width ${data.time}s linear`; bar.style.width = '0%'; if(data.time > 5) timerSoundTimeout = setTimeout(() => playSound('timer'), (data.time-5)*1000); }, 100); });
+    
+    // 🔥🔥🔥 إصلاح التايمر هنا 🔥🔥🔥
+    socket.on('start_round', (data) => { 
+        playSound('start'); 
+        showScreen('game-screen'); 
+        document.getElementById('question-text').innerHTML = data.question; 
+        
+        const inputField = document.getElementById('answer-input'); 
+        inputField.value = ''; 
+        if(data.inputType === 'number') { inputField.type = 'number'; inputField.placeholder = "أدخل رقم..."; } 
+        else { inputField.type = 'text'; inputField.placeholder = "اكتب كذبتك هنا..."; } 
+        
+        document.getElementById('truth-msg').style.display = 'none'; 
+        document.getElementById('wait-msg-game').style.display = 'none'; 
+        document.getElementById('submit-ans-btn').style.display = 'block'; 
+        renderFooterPlayers('game-players-footer', allPlayersData); 
+
+        const bar = document.getElementById('game-timer');
+        
+        // 1. تصفير الشريط (إعادته ممتلئاً بدون حركة)
+        bar.style.transition = 'none'; 
+        bar.style.width = '100%'; 
+
+        // 2. إجبار المتصفح على استيعاب التغيير (Force Reflow)
+        void bar.offsetWidth; 
+
+        // 3. تشغيل الصوت والأنيميشن
+        clearTimeout(timerSoundTimeout); 
+        sounds.timer.pause(); 
+        sounds.timer.currentTime = 0; 
+        
+        setTimeout(() => { 
+            // التحرك بمدة الوقت المحدد من السيرفر
+            bar.style.transition = `width ${data.time}s linear`; 
+            bar.style.width = '0%'; 
+            
+            // تشغيل صوت التيك-تاك في آخر 5 ثواني
+            if(data.time > 5) {
+                timerSoundTimeout = setTimeout(() => playSound('timer'), (data.time - 5) * 1000); 
+            }
+        }, 50); 
+    });
+
     function submitAnswer() { const ans = document.getElementById('answer-input').value; if(ans) socket.emit('submit_answer', { roomCode: currentRoomCode, answer: ans }); }
     socket.on('player_done', (id) => { const elGame = document.getElementById(`game-players-footer-fp-${id}`); if(elGame) elGame.classList.add('done'); });
     socket.on('player_voted', (id) => { const elVote = document.getElementById(`vote-players-footer-fp-${id}`); if(elVote) elVote.classList.add('done'); });
