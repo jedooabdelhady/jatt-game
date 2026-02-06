@@ -217,7 +217,7 @@
     <div id="name-input-screen" class="screen"><h2>من أنت؟</h2><div class="input-group"><input type="text" id="public-name" placeholder="..."></div><button class="btn btn-outline" onclick="goHome()">رجوع</button></div>
     <div id="setup-screen" class="screen">
         <h2>إعدادات جاطت ⚙️</h2>
-        <div class="input-group"><label>عدد الجولات: <span id="rounds-display" style="color:var(--primary)">5</span></label><input type="range" id="rounds-setting" min="3" max="10" value="5" oninput="document.getElementById('rounds-display').innerText=this.value"></div>
+        <div class="input-group"><label>عدد الجولات: <span id="rounds-display" style="color:var(--primary)">5</span></label><input type="range" id="rounds-setting" min="3" max="30" value="5" oninput="document.getElementById('rounds-display').innerText=this.value"></div>
         <div class="input-group"><label>وقت الإجابة: <span id="time-display" style="color:var(--primary)">30</span> ثانية</label><input type="range" id="time-setting" min="15" max="60" value="30" oninput="document.getElementById('time-display').innerText=this.value"></div>
         <div class="input-group"><label>عدد اللاعبين: <span id="players-display" style="color:var(--primary)">8</span></label><input type="range" id="max-players" min="2" max="30" value="8" oninput="document.getElementById('players-display').innerText=this.value"></div>
         <div class="btn-container"><button class="btn btn-secondary" onclick="goToTopicsSetup()">التالي: المواضيع 📋</button><button class="btn btn-outline" onclick="goHome()">إلغاء</button></div>
