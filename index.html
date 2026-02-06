@@ -12,9 +12,10 @@
         body.dark-theme { --bg-gradient: linear-gradient(135deg, #2d3436 0%, #000000 100%); --glass: rgba(30, 30, 30, 0.98); --text-main: #ffffff; --card-bg: #2d3436; --input-bg: #636e72; --dark: #ffffff; }
         * { box-sizing: border-box; }
         body { margin: 0; font-family: 'Tajawal', sans-serif; background: var(--bg-gradient); min-height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; transition: background 0.5s; -webkit-user-select: none; user-select: none; }
-        #app-container { width: 100%; max-width: 480px; height: 100dvh; background: var(--glass); position: relative; overflow: hidden; display: flex; flex-direction: column; transition: background 0.3s; box-shadow: none; }
-        @media (min-width: 501px) { #app-container { height: 90vh; max-height: 850px; border-radius: 35px; box-shadow: 0 25px 50px rgba(0,0,0,0.3); } }
-        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 25px; padding-top: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow-y: auto; transition: all 0.4s; opacity: 0; pointer-events: none; transform: scale(0.9); z-index: 0; }
+        /* تعديل الارتفاع ليتناسب مع الهواتف */
+        #app-container { width: 100%; max-width: 480px; height: 100%; min-height: 100dvh; background: var(--glass); position: relative; overflow: hidden; display: flex; flex-direction: column; transition: background 0.3s; box-shadow: none; }
+        @media (min-width: 501px) { #app-container { height: 90vh; min-height: auto; max-height: 850px; border-radius: 35px; box-shadow: 0 25px 50px rgba(0,0,0,0.3); } }
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 25px; padding-top: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow-y: auto; transition: all 0.4s; opacity: 0; pointer-events: none; transform: scale(0.9); z-index: 0; padding-bottom: 80px; /* مساحة إضافية للفوتر */ }
         .screen.active { opacity: 1; pointer-events: all; transform: scale(1); z-index: 10; }
         .top-btn { position: absolute; top: 20px; z-index: 100; background: rgba(255,255,255,0.2); border: none; font-size: 1.4rem; cursor: pointer; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.3s; backdrop-filter: blur(5px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); color: var(--text-main); }
         .theme-btn { left: 20px; } .exit-btn { right: 20px; background: #ff7675; color: white; display: none; }
@@ -52,9 +53,7 @@
         .topic-card.selected { border-color: var(--primary); background: #f0f3ff; color: var(--primary); transform: scale(0.98); }
         .lobby-list { width: 100%; max-height: 45vh; overflow-y: auto; padding: 5px; margin-bottom: 15px; }
         .player-chip { display: flex; align-items: center; justify-content: space-between; background: var(--card-bg); color: var(--text-main); padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.03); font-weight: bold; cursor: pointer; transition: 0.2s; }
-        /* 🔥 تعديل التايمر */
         .timer-bar { position: absolute; top: 0; left: 0; width: 100%; height: 8px; background: linear-gradient(90deg, #fab1a0, #ff7675); transform-origin: left; z-index: 20; border-bottom-right-radius: 10px; border-bottom-left-radius: 10px; }
-        
         .vote-btn { width: 100%; padding: 16px; margin-bottom: 10px; background: var(--card-bg); color: var(--text-main); border: 2px solid transparent; border-radius: 18px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: 0.2s; box-shadow: 0 4px 0 #dfe6e9; } 
         .vote-btn:active { transform: translateY(4px); box-shadow: none; }
         .vote-btn:disabled { opacity: 0.5; cursor: default; transform: none; box-shadow: none; }
@@ -67,10 +66,34 @@
         .status-check { position: absolute; top: -5px; right: -5px; background: var(--success); color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 12px; display: none; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 5; }
         .footer-player.done .status-check { display: flex; }
         .footer-player.done .footer-avatar { opacity: 0.6; transform: scale(0.9); filter: grayscale(50%); }
+        
         #chat-toggle-btn { position: absolute; bottom: 20px; left: 20px; z-index: 100; background: var(--primary); color: white; border: none; width: 55px; height: 55px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; box-shadow: 0 5px 15px rgba(108, 92, 231, 0.4); transition: 0.3s; display: none; }
         .has-new-msg::after { content: ''; position: absolute; top: 2px; right: 2px; width: 14px; height: 14px; background: #ff7675; border-radius: 50%; border: 2px solid white; }
-        #chat-popup { position: absolute; bottom: 85px; left: 20px; width: 300px; height: 45vh; background: var(--card-bg); border-radius: 25px; box-shadow: 0 15px 40px rgba(0,0,0,0.2); display: flex; flex-direction: column; z-index: 101; transform: scale(0); transform-origin: bottom left; transition: 0.3s; overflow: hidden; border: 1px solid rgba(0,0,0,0.05); } #chat-popup.open { transform: scale(1); }
-        .chat-header { padding: 10px 15px; background: var(--primary); color: white; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* 🔥🔥 تنسيق الشات الجديد القابل للسحب */
+        #chat-popup { 
+            position: fixed; /* تغيير من absolute ليبقى ثابتاً فوق كل شيء */
+            bottom: 85px; left: 20px; 
+            width: 300px; height: 45vh; 
+            background: var(--card-bg); 
+            border-radius: 25px; 
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3); 
+            display: flex; flex-direction: column; 
+            z-index: 9999; /* رقم عالي جداً */
+            transform: scale(0); transform-origin: bottom left; 
+            transition: transform 0.3s, opacity 0.3s;
+            overflow: hidden; 
+            border: 1px solid rgba(0,0,0,0.1); 
+            touch-action: none; /* لمنع السكرول أثناء السحب */
+        } 
+        #chat-popup.open { transform: scale(1); }
+        
+        .chat-header { 
+            padding: 10px 15px; background: var(--primary); color: white; font-weight: bold; 
+            display: flex; justify-content: space-between; align-items: center; 
+            cursor: move; /* مؤشر السحب */
+            user-select: none;
+        }
         .chat-messages-area { flex-grow: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.02); }
         
         .chat-msg-row { display: flex; align-items: flex-end; margin-bottom: 12px; width: 100%; }
@@ -87,6 +110,7 @@
 
         .chat-input-area { padding: 10px; background: var(--card-bg); border-top: 1px solid #eee; display: flex; gap: 5px; }
         .chat-input-area input { flex-grow: 1; padding: 8px; border-radius: 20px; border: 1px solid #ccc; outline: none; text-align: right; }
+        
         .loser-box { background: rgba(255, 118, 117, 0.2); border: 2px dashed #ff7675; padding: 15px; border-radius: 25px; margin: 10px 0; display: flex; flex-direction: column; align-items: center; width: 100%; }
         #player-info-modal { position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:200; display:none; justify-content:center; align-items:center; backdrop-filter: blur(5px); opacity: 0; transition: opacity 0.3s; }
         #player-info-modal.open { display:flex; opacity: 1; }
@@ -118,11 +142,13 @@
         <div id="home-btn-avatar" style="width:100%; height:100%;"></div>
     </div>
     <button id="chat-toggle-btn" onclick="toggleChat()">💬</button>
+    
     <div id="chat-popup">
-        <div class="chat-header"><span>Small Chat 😜</span><span class="chat-close" onclick="toggleChat()">×</span></div>
+        <div class="chat-header" id="chat-drag-handle"><span>Small Chat 😜</span><span class="chat-close" onclick="toggleChat()">×</span></div>
         <div class="chat-messages-area" id="chat-msgs-box"></div>
         <div class="chat-input-area"><input type="text" id="chat-input" placeholder="اكتب شي..." onkeypress="handleChatEnter(event)"><button class="chat-send-btn" style="background:var(--primary); color:white; border:none; width:35px; height:35px; border-radius:50%; cursor:pointer;" onclick="sendChatMessage()">➤</button></div>
     </div>
+
     <div id="player-info-modal" onclick="closePlayerModal(event)">
         <div class="player-info-card">
             <div id="modal-avatar" class="home-avatar-box" style="margin: 0 auto 10px;"></div>
@@ -503,7 +529,7 @@
     socket.on('choose_topic_phase', (data) => { showScreen('topic-screen'); handleTopicPhase(data); });
     function handleTopicPhase(data) { const cont = document.getElementById('topics-container'); cont.innerHTML = ''; if (socket.id === data.chooserId) { document.getElementById('chooser-msg').innerText = "اختر الموضوع"; data.availableTopics.forEach(tid => { const t = allTopics.find(x => x.id === tid); if(t) { const btn = document.createElement('div'); btn.className = 'topic-card'; btn.innerText = t.icon+' '+t.label; btn.onclick = () => socket.emit('topic_selected', { roomCode: currentRoomCode, topic: tid }); cont.appendChild(btn); } }); } else document.getElementById('chooser-msg').innerText = `${data.chooserName} يختار...`; }
     
-    // 🔥🔥🔥 إصلاح التايمر هنا 🔥🔥🔥
+    // 🔥🔥🔥 التايمر هنا 🔥🔥🔥
     socket.on('start_round', (data) => { 
         playSound('start'); 
         showScreen('game-screen'); 
@@ -520,25 +546,17 @@
         renderFooterPlayers('game-players-footer', allPlayersData); 
 
         const bar = document.getElementById('game-timer');
-        
-        // 1. تصفير الشريط (إعادته ممتلئاً بدون حركة)
         bar.style.transition = 'none'; 
         bar.style.width = '100%'; 
-
-        // 2. إجبار المتصفح على استيعاب التغيير (Force Reflow)
         void bar.offsetWidth; 
 
-        // 3. تشغيل الصوت والأنيميشن
         clearTimeout(timerSoundTimeout); 
         sounds.timer.pause(); 
         sounds.timer.currentTime = 0; 
         
         setTimeout(() => { 
-            // التحرك بمدة الوقت المحدد من السيرفر
             bar.style.transition = `width ${data.time}s linear`; 
             bar.style.width = '0%'; 
-            
-            // تشغيل صوت التيك-تاك في آخر 5 ثواني
             if(data.time > 5) {
                 timerSoundTimeout = setTimeout(() => playSound('timer'), (data.time - 5) * 1000); 
             }
@@ -563,12 +581,9 @@
     function sendChatMessage() { const inp = document.getElementById('chat-input'); const msg = inp.value.trim(); if(msg && currentRoomCode) { socket.emit('send_chat', { roomCode: currentRoomCode, message: msg }); inp.value = ''; } }
     function handleChatEnter(e) { if(e.key === 'Enter') sendChatMessage(); }
 
-    // 🔥🔥 تعديل الشات لاستقبال الأفاتار
     socket.on('receive_chat', (data) => { 
         const box = document.getElementById('chat-msgs-box'); 
         const isMine = data.senderId === socket.id; 
-        
-        // توليد الأفاتار للشات
         const avatarSVG = generateSVG(data.avatarConfig || {color:0});
 
         const div = document.createElement('div'); 
@@ -588,7 +603,62 @@
         } 
     });
     
-    // تشغيل التعديلات لأول مرة
+    // 🔥 جعل الشات قابل للسحب (Drag & Drop) للجوال والكمبيوتر
+    const chatPopup = document.getElementById('chat-popup');
+    const dragHandle = document.getElementById('chat-drag-handle');
+    let isDragging = false;
+    let startX, startY, initialLeft, initialTop;
+
+    function startDrag(e) {
+        // إذا كان اللمس على زر الإغلاق، لا تبدأ السحب
+        if (e.target.classList.contains('chat-close')) return;
+        
+        isDragging = true;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        
+        startX = clientX;
+        startY = clientY;
+        
+        // الحصول على القيم الحالية (مع تحويل auto إلى قيم رقمية)
+        const rect = chatPopup.getBoundingClientRect();
+        initialLeft = rect.left;
+        initialTop = rect.top;
+        
+        // إزالة bottom/right واستخدام top/left للحركة الحرة
+        chatPopup.style.bottom = 'auto';
+        chatPopup.style.right = 'auto';
+        chatPopup.style.left = initialLeft + 'px';
+        chatPopup.style.top = initialTop + 'px';
+    }
+
+    function doDrag(e) {
+        if (!isDragging) return;
+        e.preventDefault(); // منع السكرول أثناء السحب
+
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+        
+        chatPopup.style.left = (initialLeft + dx) + 'px';
+        chatPopup.style.top = (initialTop + dy) + 'px';
+    }
+
+    function stopDrag() {
+        isDragging = false;
+    }
+
+    // إضافة مستمعي الأحداث (Mouse + Touch)
+    dragHandle.addEventListener('mousedown', startDrag);
+    document.addEventListener('mousemove', doDrag);
+    document.addEventListener('mouseup', stopDrag);
+
+    dragHandle.addEventListener('touchstart', startDrag, { passive: false });
+    document.addEventListener('touchmove', doDrag, { passive: false });
+    document.addEventListener('touchend', stopDrag);
+
     renderEditor();
 </script>
 </body>
