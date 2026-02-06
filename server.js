@@ -7,12 +7,9 @@ const questionsData = require('./questions');
 const app = express();
 const server = http.createServer(app);
 
-// إعدادات CORS لتجنب مشاكل الاتصال
+// إعدادات CORS
 const io = socketIo(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
+    cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -23,7 +20,6 @@ const players = {};
 
 function generateRoomCode() { return Math.floor(1000 + Math.random() * 9000).toString(); }
 
-// توحيد الأرقام وحذف المسافات
 function normalizeCode(input) {
     if (!input) return "";
     return input.toString()
@@ -33,17 +29,13 @@ function normalizeCode(input) {
 }
 
 io.on('connection', (socket) => {
-    console.log('New player connected:', socket.id);
+    console.log('New connection:', socket.id);
 
-    // === 1. إنشاء الغرفة ===
+    // === إنشاء الغرفة ===
     socket.on('create_private_room', ({ name, avatarConfig, social }) => {
         let rawCode = generateRoomCode();
         let roomCode = normalizeCode(rawCode);
-
-        while (rooms[roomCode]) {
-            rawCode = generateRoomCode();
-            roomCode = normalizeCode(rawCode);
-        }
+        while (rooms[roomCode]) { rawCode = generateRoomCode(); roomCode = normalizeCode(rawCode); }
 
         rooms[roomCode] = {
             code: roomCode, hostId: socket.id, players: [], gameState: 'lobby',
@@ -51,57 +43,42 @@ io.on('connection', (socket) => {
             currentRound: 0, scores: {}, roundData: {}, usedQuestions: [], availableChoosers: [],
             kickVotes: {} 
         };
-        
-        console.log(`[CREATE] Room ${roomCode} created by ${name}`);
         joinRoom(socket, roomCode, name, avatarConfig, social, true);
     });
 
-    // === 2. الانضمام للغرفة ===
+    // === الانضمام ===
     socket.on('join_room', ({ code, name, avatarConfig, social }) => {
         const cleanCode = normalizeCode(code);
-        
-        console.log(`[JOIN ATTEMPT] Player ${name} trying to join ${cleanCode}`);
-
         if (rooms[cleanCode]) {
-            if (rooms[cleanCode].players.length >= rooms[cleanCode].settings.maxPlayers) {
-                return socket.emit('error_msg', 'الغرفة ممتلئة!');
-            }
+            if (rooms[cleanCode].players.length >= rooms[cleanCode].settings.maxPlayers) return socket.emit('error_msg', 'الغرفة ممتلئة!');
             joinRoom(socket, cleanCode, name, avatarConfig, social, false);
         } else {
-            console.log(`[JOIN FAILED] Room ${cleanCode} not found`);
-            socket.emit('error_msg', 'الكود غلط يا فنان! تأكد من الرقم.');
+            socket.emit('error_msg', 'الكود غلط يا فنان!');
         }
     });
 
-    // 🔥 دالة الدخول الموحدة (معدلة لمنع تكرار الأسماء)
+    // 🔥 دالة الدخول الموحدة
     function joinRoom(socket, code, name, avatarConfig, social, isHost) {
         const room = rooms[code];
         if (!room) { socket.emit('error_msg', 'الغرفة غير موجودة.'); return; }
 
-        // البحث عن لاعب بنفس الاسم
         const existingPlayerByName = room.players.find(p => p.name === name);
-        // البحث عن لاعب بنفس الـ Socket ID (في حال الريفريش)
         const existingPlayerById = room.players.find(p => p.id === socket.id);
 
-        // الحالة 1: اللاعب موجود بالـ ID (يعني عمل ريفريش) -> نسمح له بالدخول
+        // 1. إعادة اتصال (نفس الجهاز)
         if (existingPlayerById) {
              handlePlayerReconnect(socket, room, existingPlayerById, avatarConfig, social);
              return;
         }
 
-        // الحالة 2: الاسم موجود لكن الـ ID مختلف (يعني شخص آخر يحاول سرقة الاسم أو تشابه أسماء)
+        // 2. تكرار الاسم (شخص آخر) -> تغيير الاسم تلقائياً
         if (existingPlayerByName) {
-            // حل بسيط: نضيف رقم عشوائي للاسم تلقائياً
-            // مثال: خالد -> خالد_99
             name = `${name}_${Math.floor(Math.random() * 100)}`;
-            socket.emit('error_msg', `الاسم مكرر! تم تغيير اسمك إلى ${name}`);
+            socket.emit('error_msg', `الاسم مكرر! دخلت باسم: ${name}`);
         }
 
-        // الحالة 3: دخول جديد (أو بعد تعديل الاسم)
-        if (room.gameState !== 'lobby') { 
-            socket.emit('error_msg', 'اللعبة بدأت بالفعل!'); 
-            return; 
-        }
+        // 3. دخول جديد
+        if (room.gameState !== 'lobby') { socket.emit('error_msg', 'اللعبة بدأت!'); return; }
         
         const newPlayer = {
             id: socket.id, name: name, avatarConfig: avatarConfig, social: social || {},
@@ -113,20 +90,15 @@ io.on('connection', (socket) => {
         room.players.push(newPlayer);
         room.scores[socket.id] = 0;
         
-        console.log(`[JOIN SUCCESS] ${name} joined room ${code}`);
-
-        // تحديث الجميع
         io.to(code).emit('update_lobby', { code: code, players: room.players, hostId: room.hostId });
         if (isHost) socket.emit('go_to_setup', code);
     }
 
-    // === 3. الريفريش (إعادة الاتصال) ===
+    // === الريفريش ===
     socket.on('rejoin_game', ({ roomCode, name, avatarConfig, social }) => {
         const cleanCode = normalizeCode(roomCode);
         const room = rooms[cleanCode];
-
         if (room) {
-            // في الريفريش نبحث بالاسم لأن الـ Socket ID تغير
             const existingPlayer = room.players.find(p => p.name === name);
             if (existingPlayer) {
                 handlePlayerReconnect(socket, room, existingPlayer, avatarConfig, social);
@@ -139,6 +111,7 @@ io.on('connection', (socket) => {
         }
     });
 
+    // 🔥 إصلاح مشكلة زر الهوست هنا
     function handlePlayerReconnect(socket, room, player, newAvatar, newSocial) {
         const oldSocketId = player.id;
         
@@ -149,11 +122,14 @@ io.on('connection', (socket) => {
         delete players[oldSocketId];
         players[socket.id] = player;
         
-        if (player.isHost) room.hostId = socket.id;
+        // ✅ هذا هو السطر الذي يحل مشكلة اختفاء الزر عند الهوست
+        if (player.isHost) {
+            room.hostId = socket.id;
+        }
 
         socket.join(room.code);
 
-        // نقل البيانات
+        // نقل البيانات القديمة
         if (room.roundData) {
             if (room.roundData.answers && room.roundData.answers[oldSocketId]) {
                 room.roundData.answers[socket.id] = room.roundData.answers[oldSocketId];
@@ -167,7 +143,6 @@ io.on('connection', (socket) => {
                 room.roundData.chooserId = socket.id;
             }
         }
-
         sendCurrentStateToRejoiner(socket, room, player);
     }
 
@@ -177,7 +152,8 @@ io.on('connection', (socket) => {
             topicData: (room.gameState === 'picking_topic') ? { chooserId: room.roundData.chooserId, chooserName: players[room.roundData.chooserId]?.name, availableTopics: room.settings.topics } : null,
             questionData: (room.gameState === 'input' || room.gameState === 'voting') ? { question: room.roundData.currentQuestion.q, inputType: 'text' } : null,
             voteOptions: (room.gameState === 'voting') ? room.roundData.voteOptions : null,
-            resultData: (room.gameState === 'results') ? { truth: room.roundData.currentQuestion.truth, leaderboard: getLeaderboard(room), hostId: room.hostId } : null,
+            // تأكدنا من إرسال hostId المحدث
+            resultData: (room.gameState === 'results') ? { truth: room.roundData.currentQuestion.truth, leaderboard: getLeaderboard(room), hostId: room.hostId, isFinal: (room.currentRound >= room.settings.rounds) } : null,
             hasAnswered: (room.gameState === 'input' && room.roundData.answers && room.roundData.answers[socket.id]),
             hasVoted: (room.gameState === 'voting' && room.roundData.votes && room.roundData.votes[socket.id]),
             donePlayers: (room.gameState === 'input') ? Object.keys(room.roundData.answers || {}) : [],
@@ -185,33 +161,37 @@ io.on('connection', (socket) => {
         });
     }
 
-    // === باقي المنطق ===
+    // === الشات الجديد (مع الشخصية) ===
+    socket.on('send_chat', ({ roomCode, message }) => { 
+        if (!message || !message.trim()) return; 
+        const player = players[socket.id]; 
+        io.to(roomCode).emit('receive_chat', { 
+            senderId: socket.id, 
+            senderName: player ? player.name : 'مجهول', 
+            avatarConfig: player ? player.avatarConfig : {color:0}, // إرسال الأفاتار
+            message: message 
+        }); 
+    });
+
+    // ... باقي المنطق (التصويت، النتائج، الخروج) ...
     socket.on('save_settings', ({ roomCode, settings }) => { if (rooms[roomCode]) rooms[roomCode].settings = { ...rooms[roomCode].settings, ...settings }; });
-    
     socket.on('start_game_flow', (roomCode) => {
         const room = rooms[roomCode]; if (!room) return;
         if (room.players.length < 2) return socket.emit('error_msg', 'لازم لاعبين اثنين على الأقل!');
         room.availableChoosers = []; startTopicPhase(room);
     });
-
     function startTopicPhase(room) {
         room.gameState = 'picking_topic'; room.currentRound++;
         if (!room.availableChoosers || room.availableChoosers.length === 0) room.availableChoosers = room.players.map(p => p.id);
         room.availableChoosers = room.availableChoosers.filter(id => players[id]); 
-        if(room.availableChoosers.length === 0) room.availableChoosers = room.players.map(p => p.id);
-        
         const idx = Math.floor(Math.random() * room.availableChoosers.length);
         const chooserId = room.availableChoosers[idx]; room.availableChoosers.splice(idx, 1);
-        
         const chooser = room.players.find(p => p.id === chooserId);
         if (!chooser) return startTopicPhase(room);
-        
         room.roundData = { chooserId: chooser.id, chooserName: chooser.name, answers: {}, votes: {}, voteOptions: [] };
         io.to(room.code).emit('choose_topic_phase', { chooserId: chooser.id, chooserName: chooser.name, availableTopics: room.settings.topics });
     }
-
     socket.on('topic_selected', ({ roomCode, topic }) => { const room = rooms[roomCode]; if (room && socket.id === room.roundData.chooserId) startQuestionPhase(room, topic); });
-
     function startQuestionPhase(room, topicId) {
         room.gameState = 'input';
         let categoryQuestions = questionsData[topicId] || questionsData['variety'];
@@ -222,7 +202,6 @@ io.on('connection', (socket) => {
         room.roundData.currentQuestion = selectedQ; room.roundData.answers = {};
         io.to(room.code).emit('start_round', { question: selectedQ.q, inputType: 'text', time: room.settings.time });
     }
-
     socket.on('submit_answer', ({ roomCode, answer }) => {
         const room = rooms[roomCode]; if (!room || room.gameState !== 'input') return;
         if (room.roundData.answers[socket.id]) return;
@@ -234,7 +213,6 @@ io.on('connection', (socket) => {
         const activePlayersCount = room.players.filter(p => players[p.id]).length;
         if (Object.keys(room.roundData.answers).length >= activePlayersCount) startVotingPhase(room);
     });
-
     function startVotingPhase(room) {
         room.gameState = 'voting'; 
         const options = [{ text: room.roundData.currentQuestion.truth, type: 'TRUTH', id: 'truth' }];
@@ -243,7 +221,6 @@ io.on('connection', (socket) => {
         room.roundData.voteOptions = options; room.roundData.votes = {};
         io.to(room.code).emit('voting_phase', { options: options.map(o => ({ text: o.text, id: o.id })) });
     }
-
     socket.on('submit_vote', ({ roomCode, choiceData }) => {
         const room = rooms[roomCode]; if (!room || room.gameState !== 'voting') return;
         if (room.roundData.votes[socket.id]) return;
@@ -252,7 +229,6 @@ io.on('connection', (socket) => {
         const activePlayersCount = room.players.filter(p => players[p.id]).length;
         if (Object.keys(room.roundData.votes).length >= activePlayersCount) calculateResults(room);
     });
-
     function calculateResults(room) {
         room.gameState = 'results'; room.players.forEach(p => p.lastPoints = 0);
         for (const [voterId, choiceId] of Object.entries(room.roundData.votes)) {
@@ -262,11 +238,9 @@ io.on('connection', (socket) => {
         }
         io.to(room.code).emit('show_results', { truth: room.roundData.currentQuestion.truth, leaderboard: getLeaderboard(room), isFinal: (room.currentRound >= room.settings.rounds), hostId: room.hostId });
     }
-
     function getLeaderboard(room) {
         return room.players.sort((a, b) => b.score - a.score).map(p => ({ id: p.id, name: p.name, score: p.score, lastPoints: p.lastPoints, avatarConfig: p.avatarConfig, social: p.social }));
     }
-
     socket.on('vote_kick', ({ targetId }) => {
         const player = players[socket.id]; if (!player) return;
         const room = rooms[player.roomCode]; if (!room) return;
@@ -288,7 +262,6 @@ io.on('connection', (socket) => {
             }
         }
     });
-
     socket.on('next_step', (roomCode) => {
         const room = rooms[roomCode]; if (!room) return;
         if (room.currentRound >= room.settings.rounds) {
@@ -298,24 +271,19 @@ io.on('connection', (socket) => {
             io.to(roomCode).emit('game_over', { winner: winner, loser: loser, hostId: room.hostId });
         } else startTopicPhase(room);
     });
-
     socket.on('restart_game', (roomCode) => {
         const room = rooms[roomCode]; if (room) {
             room.currentRound = 0; room.players.forEach(p => { p.score = 0; p.lastPoints = 0; }); room.gameState = 'lobby'; room.usedQuestions = []; room.availableChoosers = [];
             io.to(roomCode).emit('update_lobby', { code: roomCode, players: room.players, hostId: room.hostId });
         }
     });
-
     socket.on('leave_game', (roomCode) => leaveRoomLogic(socket, roomCode));
-    socket.on('send_chat', ({ roomCode, message }) => { if (!message || !message.trim()) return; io.to(roomCode).emit('receive_chat', { senderId: socket.id, senderName: players[socket.id]?.name, message: message }); });
     socket.on('disconnect', () => { console.log('Disconnect:', socket.id); }); 
-
     function leaveRoomLogic(socket, code) {
         const room = rooms[code]; if (room) {
             room.players = room.players.filter(p => p.id !== socket.id);
             if (room.availableChoosers) room.availableChoosers = room.availableChoosers.filter(id => id !== socket.id);
             if (room.kickVotes && room.kickVotes[socket.id]) delete room.kickVotes[socket.id];
-            
             if (socket.id === room.hostId && room.players.length > 0) { room.hostId = room.players[0].id; room.players[0].isHost = true; }
             if (room.players.length === 0) delete rooms[code];
             else { io.to(code).emit('player_left_update', room.players); if (room.gameState === 'lobby') io.to(code).emit('update_lobby', { code: code, players: room.players, hostId: room.hostId }); }

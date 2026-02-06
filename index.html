@@ -70,11 +70,20 @@
         #chat-popup { position: absolute; bottom: 85px; left: 20px; width: 300px; height: 45vh; background: var(--card-bg); border-radius: 25px; box-shadow: 0 15px 40px rgba(0,0,0,0.2); display: flex; flex-direction: column; z-index: 101; transform: scale(0); transform-origin: bottom left; transition: 0.3s; overflow: hidden; border: 1px solid rgba(0,0,0,0.05); } #chat-popup.open { transform: scale(1); }
         .chat-header { padding: 10px 15px; background: var(--primary); color: white; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
         .chat-messages-area { flex-grow: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.02); }
-        .chat-msg-row { display: flex; flex-direction: column; max-width: 85%; }
-        .chat-msg-row.mine { align-self: flex-end; align-items: flex-end; } .chat-msg-row.theirs { align-self: flex-start; align-items: flex-start; }
-        .chat-bubble { padding: 8px 12px; font-size: 0.9rem; word-wrap: break-word; }
-        .chat-msg-row.mine .chat-bubble { background: var(--primary); color: white; border-radius: 15px 15px 0 15px; } .chat-msg-row.theirs .chat-bubble { background: var(--input-bg); color: var(--text-main); border-radius: 15px 15px 15px 0; }
-        .chat-sender { font-size: 0.7rem; color: #888; margin-bottom: 2px; margin-left: 5px; }
+        
+        /* 🔥 تنسيق الشات الجديد بالأفاتار */
+        .chat-msg-row { display: flex; align-items: flex-end; margin-bottom: 12px; width: 100%; }
+        .chat-msg-row.mine { flex-direction: row-reverse; } 
+        .chat-msg-row.theirs { flex-direction: row; }
+        .chat-avatar-small { width: 35px; height: 35px; border-radius: 50%; background: #fff; border: 1px solid #ccc; overflow: hidden; flex-shrink: 0; margin: 0 5px; }
+        .chat-avatar-small svg { width: 100%; height: 100%; }
+        .chat-content { display: flex; flex-direction: column; max-width: 75%; }
+        .chat-sender { font-size: 0.65rem; color: #666; margin-bottom: 2px; font-weight: bold; text-align: right; }
+        .chat-msg-row.mine .chat-sender { display: none; }
+        .chat-bubble { padding: 8px 12px; font-size: 0.9rem; word-wrap: break-word; border-radius: 15px; position: relative; }
+        .chat-msg-row.mine .chat-bubble { background: var(--primary); color: white; border-bottom-left-radius: 2px; } 
+        .chat-msg-row.theirs .chat-bubble { background: var(--input-bg); color: var(--text-main); border-bottom-right-radius: 2px; }
+
         .chat-input-area { padding: 10px; background: var(--card-bg); border-top: 1px solid #eee; display: flex; gap: 5px; }
         .chat-input-area input { flex-grow: 1; padding: 8px; border-radius: 20px; border: 1px solid #ccc; outline: none; text-align: right; }
         .loser-box { background: rgba(255, 118, 117, 0.2); border: 2px dashed #ff7675; padding: 15px; border-radius: 25px; margin: 10px 0; display: flex; flex-direction: column; align-items: center; width: 100%; }
@@ -88,20 +97,20 @@
         .social-btn.disabled { background: #eee; color: #aaa; pointer-events: none; box-shadow: none; }
         .kick-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; opacity: 0.5; transition: 0.3s; padding: 5px; }
         .kick-btn:hover { opacity: 1; transform: scale(1.2); }
-        .avatar-controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; width: 100%; margin-bottom: 20px; }
+        .avatar-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; margin-bottom: 20px; }
         .control-btn { background: var(--card-bg); color: var(--text-main); border: 2px solid #eee; padding: 12px 5px; border-radius: 12px; cursor: pointer; font-size: 1rem; font-weight: bold; transition: 0.2s; touch-action: manipulation; }
         .control-btn:active { transform: scale(0.95); background: #eee; }
 
         /* 🔥 تعديل البروفايل لرفع الدائرة */
         #profile-screen .card-box {
-            padding-top: 90px; /* مساحة للدائرة */
+            padding-top: 90px;
             position: relative;
             margin-top: 70px; 
             overflow: visible; 
         }
         #profile-avatar {
             position: absolute;
-            top: -75px; /* رفع الدائرة للأعلى */
+            top: -75px; 
             left: 50%;
             transform: translateX(-50%);
             width: 150px;
@@ -159,7 +168,7 @@
         <p style="font-size:0.8rem; margin:5px 0; color:var(--text-main);">حط حساب واحد على الأقل 👇</p>
         <div class="social-input"><i class="fab fa-instagram" style="color: #bc1888;"></i><input type="text" id="reg-insta-input" placeholder="Enter Instagram User"></div>
         <div class="social-input"><i class="fab fa-snapchat-ghost" style="color: #FFFC00; text-shadow: 0 0 2px #000;"></i><input type="text" id="reg-snap-input" placeholder=" Enter Snap User"></div>
-        <div class="avatar-controls" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="avatar-controls">
             <button class="control-btn" onclick="changeConfig('color')">🎨 لون</button>
             <button class="control-btn" onclick="changeConfig('face')">👀 وجه</button>
             <button class="control-btn" onclick="changeConfig('hat')">🎩 قبعة</button>
@@ -256,11 +265,10 @@
         if (el) el.innerHTML = content;
     }
 
-    // === SVG Generator (الكود الأصلي + الإضافات الجديدة) ===
-    const colors = ['#FF9F43', '#54a0ff', '#5f27cd', '#ff6b6b', '#1dd1a1', '#feca57', '#fd79a8', '#00cec9', '#6D214F', '#2d3436', '#badc58'];
+    // === SVG Generator ===
+    const colors = ['#FF9F43', '#54a0ff', '#5f27cd', '#ff6b6b', '#1dd1a1', '#feca57', '#fd79a8', '#00cec9', '#6D214F', '#2d3436', '#badc58', '#fab1a0', '#ffeaa7'];
     let avatarConfig = { color: 0, face: 0, hat: 0 };
     
-    // 🔥 القبعات والشعر الجديد
     const hats = [ 
         `<g transform="translate(50, -5)"><path d="M-35 20 Q-45 5 -25 0" stroke="#3d3d3d" stroke-width="3" fill="#f1f2f6"/><path d="M35 20 Q45 5 25 0" stroke="#3d3d3d" stroke-width="3" fill="#f1f2f6"/><path d="M-25 30 Q-25 5 0 5 Q25 5 25 30" fill="#cd6133" stroke="#3d3d3d" stroke-width="3"/><path d="M-28 30 L28 30 L28 35 L-28 35 Z" fill="#b2bec3" stroke="#3d3d3d" stroke-width="3"/><path d="M-5 35 L-5 5 L5 5 L5 35 Z" fill="#b2bec3" stroke="#3d3d3d" stroke-width="3"/></g>`, 
         ``, 
@@ -271,15 +279,11 @@
         `<g transform="translate(50, -10)"><path d="M-35 15 Q0 25 35 15 L30 5 Q0 10 -30 5 Z" fill="#8B4513" stroke="#3d3d3d" stroke-width="2"/><rect x="-15" y="0" width="30" height="15" fill="#8B4513" stroke="#3d3d3d"/><rect x="-15" y="10" width="30" height="5" fill="#6D214F"/></g>`, 
         `<g transform="translate(50, 0)"><path d="M-30 30 Q-30 -10 30 30" fill="none" stroke="#3d3d3d" stroke-width="6"/><rect x="-38" y="20" width="12" height="25" rx="5" fill="#74b9ff" stroke="#3d3d3d" stroke-width="2"/><rect x="26" y="20" width="12" height="25" rx="5" fill="#74b9ff" stroke="#3d3d3d" stroke-width="2"/></g>`, 
         `<g transform="translate(50, -15)"><path d="M0 20 Q5 5 15 0 Q5 5 0 20 Q-5 5 -15 0 Q-5 5 0 20" fill="#badc58" stroke="#3d3d3d" stroke-width="2"/><rect x="-8" y="20" width="16" height="12" fill="#e17055" stroke="#3d3d3d" stroke-width="2"/></g>`,
-        // شعر قصير (Bob Cut)
-        `<g transform="translate(50, 20)"><path d="M-22 10 Q-25 35 -20 48 L-15 48 Q-18 35 -12 10 Q0 -8 12 10 Q18 35 15 48 L20 48 Q25 35 22 10 Q0 -20 -22 10 Z" fill="#4b3621" stroke="#3d3d3d" stroke-width="2"/></g>`,
-        // كعكة مع فيونكة (Bun with Bow)
-        `<g transform="translate(50, 15)"><circle cx="0" cy="-5" r="14" fill="#4b3621" stroke="#3d3d3d" stroke-width="2"/><path d="M-4 5 Q-10 5 -12 0 L-2 0 Z" fill="#ff7675" stroke="#3d3d3d" stroke-width="1.5"/><path d="M4 5 Q10 5 12 0 L2 0 Z" fill="#ff7675" stroke="#3d3d3d" stroke-width="1.5"/><circle cx="0" cy="0" r="2.5" fill="#ff7675"/></g>`,
-        // طوق أذن القطة (Cat Ears)
-        `<g transform="translate(50, 28)"><path d="M-22 5 Q0 -8 22 5" fill="none" stroke="#3d3d3d" stroke-width="3"/><path d="M-16 2 L-24 -10 L-8 0 Z" fill="#3d3d3d"/><path d="M16 2 L24 -10 L8 0 Z" fill="#3d3d3d"/></g>`
+        `<g transform="translate(50, 0)"><path d="M-22 5 Q-30 40 -15 50 L 15 50 Q 30 40 22 5 Q 0 -10 -22 5" fill="#4b3621" stroke="#3d3d3d" stroke-width="2"/></g>`,
+        `<g transform="translate(50, -10)"><circle cx="0" cy="0" r="15" fill="#5d4037" stroke="#3d3d3d" stroke-width="2"/><path d="M-5 5 Q0 10 5 5" fill="none" stroke="#ff7675" stroke-width="3"/></g>`,
+        `<g transform="translate(50, -5)"><path d="M-20 10 L-25 -5 L-10 5 Z" fill="#3d3d3d"/><path d="M20 10 L25 -5 L10 5 Z" fill="#3d3d3d"/></g>`
     ];
     
-    // 🔥 الوجوه الجديدة (داخل الدائرة)
     const faces = [ 
         `<g transform="translate(50, 35)"><path d="M-20 0 Q-10 10 0 0 Z" fill="white" stroke="#3d3d3d" stroke-width="2.5" transform="translate(-10, 0)"/><path d="M-20 0 Q-10 10 0 0 Z" fill="white" stroke="#3d3d3d" stroke-width="2.5" transform="translate(25, 0)"/><circle cx="-18" cy="3" r="2" fill="black"/><circle cx="18" cy="3" r="2" fill="black"/><path d="M-15 20 L-10 15 L-5 20 L0 15 L5 20 L10 15 L15 20" fill="none" stroke="#3d3d3d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>`, 
         `<g transform="translate(50, 40)"><circle cx="-15" cy="0" r="4" fill="black"/><circle cx="15" cy="0" r="4" fill="black"/><path d="M-5 10 Q0 15 5 10" fill="none" stroke="black" stroke-width="3" stroke-linecap="round"/></g>`, 
@@ -289,19 +293,15 @@
         `<g transform="translate(50, 42)"><circle cx="-15" cy="-5" r="3" fill="black"/><circle cx="15" cy="-5" r="3" fill="black"/><path d="M-5 10 Q-15 10 -20 0 Q-10 5 0 10 Q10 5 20 0 Q15 10 5 10 Z" fill="#2d3436" stroke="black" stroke-width="1"/></g>`, 
         `<g transform="translate(50, 38)"><circle cx="0" cy="5" r="14" fill="white" stroke="black" stroke-width="2"/><circle cx="0" cy="5" r="6" fill="black"/><path d="M-8 25 Q0 20 8 25" fill="none" stroke="black" stroke-width="3"/></g>`, 
         `<g transform="translate(50, 40)"><circle cx="-15" cy="0" r="3" fill="black"/><circle cx="15" cy="0" r="3" fill="black"/><path d="M-15 5 L-15 15" stroke="#74b9ff" stroke-width="3"/><path d="M15 5 L15 15" stroke="#74b9ff" stroke-width="3"/><path d="M-8 20 Q0 15 8 20" fill="none" stroke="black" stroke-width="3"/></g>`,
-        // وجه بنوتي (رموش)
-        `<g transform="translate(50, 42)"><ellipse cx="-9" cy="-2" rx="5" ry="3.5" fill="white" stroke="#3d3d3d" stroke-width="1.5"/><circle cx="-9" cy="-2" r="2" fill="#3d3d3d"/><path d="M-14 -2 L-17 -5 M-12 -5 L-14 -8 M-7 -4 L-5 -7" stroke="#3d3d3d" stroke-width="1.5"/><ellipse cx="9" cy="-2" rx="5" ry="3.5" fill="white" stroke="#3d3d3d" stroke-width="1.5"/><circle cx="9" cy="-2" r="2" fill="#3d3d3d"/><path d="M14 -2 L17 -5 M12 -5 L14 -8 M7 -4 L5 -7" stroke="#3d3d3d" stroke-width="1.5"/><path d="M-4 8 Q0 10 4 8" fill="none" stroke="#3d3d3d" stroke-width="1.5"/></g>`,
-        // وجه كيوت (لامع)
-        `<g transform="translate(50, 42)"><circle cx="-10" cy="-1" r="5.5" fill="#3d3d3d"/><circle cx="-8" cy="-3" r="2" fill="white"/><circle cx="10" cy="-1" r="5.5" fill="#3d3d3d"/><circle cx="12" cy="-3" r="2" fill="white"/><path d="M-3 7 Q0 5 3 7" fill="none" stroke="#3d3d3d" stroke-width="2"/></g>`,
-        // وجه خجول (Blushing)
-        `<g transform="translate(50, 45)"><path d="M-12 -2 Q-7 -6 -2 -2" fill="none" stroke="#3d3d3d" stroke-width="2"/><path d="M12 -2 Q7 -6 2 -2" fill="none" stroke="#3d3d3d" stroke-width="2"/><ellipse cx="-14" cy="4" rx="4" ry="2" fill="#ffb6c1" opacity="0.7"/><ellipse cx="14" cy="4" rx="4" ry="2" fill="#ffb6c1" opacity="0.7"/><path d="M-3 6 Q0 8 3 6" fill="none" stroke="#3d3d3d" stroke-width="1.5"/></g>`
+        `<g transform="translate(50, 40)"><circle cx="-12" cy="0" r="3" fill="black"/><path d="M-15 -3 L-18 -6 M-12 -3 L-12 -7" stroke="black" stroke-width="1.5"/><circle cx="12" cy="0" r="3" fill="black"/><path d="M15 -3 L18 -6 M12 -3 L12 -7" stroke="black" stroke-width="1.5"/><path d="M-5 10 Q0 13 5 10" fill="none" stroke="black" stroke-width="2"/></g>`,
+        `<g transform="translate(50, 40)"><circle cx="-10" cy="0" r="5" fill="black"/><circle cx="-8" cy="-2" r="2" fill="white"/><circle cx="10" cy="0" r="5" fill="black"/><circle cx="12" cy="-2" r="2" fill="white"/><path d="M-2 8 Q0 6 2 8" fill="none" stroke="black" stroke-width="1.5"/></g>`,
+        `<g transform="translate(50, 42)"><path d="M-12 0 L-8 4 L-4 0" fill="none" stroke="black" stroke-width="2"/><path d="M4 0 L8 4 L12 0" fill="none" stroke="black" stroke-width="2"/><ellipse cx="-12" cy="8" rx="4" ry="2" fill="#ff7675" opacity="0.6"/><ellipse cx="12" cy="8" rx="4" ry="2" fill="#ff7675" opacity="0.6"/></g>`
     ];
 
     function generateSVG(config) { 
         const color = colors[config.color % colors.length]; 
         const hat = hats[config.hat % hats.length] || ''; 
         const face = faces[config.face % faces.length]; 
-        // الشكل القديم (الجسم البيضاوي)
         return `<svg viewBox="0 -30 100 150" xmlns="http://www.w3.org/2000/svg">
             <g transform="translate(0, 10)">
                 <ellipse cx="50" cy="95" rx="30" ry="8" fill="rgba(0,0,0,0.15)" />
@@ -317,7 +317,6 @@
 
     function renderEditor() {
         const svg = generateSVG(avatarConfig);
-        // 🔥 الرسم الآمن (يمنع الخطأ الأول)
         safeRender('avatar-editor-preview', svg);
         safeRender('reg-avatar-preview', svg);
         safeRender('edit-avatar-preview', svg);
@@ -325,7 +324,7 @@
         safeRender('home-btn-avatar', svg);
         safeRender('profile-avatar', svg);
         safeRender('modal-avatar', svg);
-        safeRender('winner-avatar-display', svg); // تأكد من وجوده لتجنب خطأ الكونسول
+        safeRender('winner-avatar-display', svg);
         safeRender('loser-avatar-display', svg);
     }
     
@@ -373,11 +372,10 @@
 
     function goToEditVisuals() { 
         renderEditor(); 
-        document.getElementById('edit-name-input').value = myName; // ملء الاسم الحالي
+        document.getElementById('edit-name-input').value = myName; 
         showScreen('screen-edit-visuals'); 
     }
     
-    // 🔥 حفظ الاسم الجديد + الشكل
     function saveVisualsAndReturn() { 
         const newName = document.getElementById('edit-name-input').value.trim();
         if(newName) { myName = newName; sessionStorage.setItem('player_name', myName); localStorage.setItem('jatt_saved_name', myName); }
@@ -388,7 +386,6 @@
     
     function editProfileFromProfile() { isEditingFromProfile = true; document.getElementById('player-name-input').value = myName; renderEditor(); showScreen('screen-avatar'); }
 
-    // === التسجيل الإجباري ===
     function saveRegistration() {
         const name = document.getElementById('reg-name-input').value.trim();
         const insta = document.getElementById('reg-insta-input').value.trim();
@@ -557,7 +554,31 @@
     function toggleChat() { document.getElementById('chat-popup').classList.toggle('open'); document.getElementById('chat-toggle-btn').classList.remove('has-new-msg'); if(document.getElementById('chat-popup').classList.contains('open')) { document.getElementById('chat-input').focus(); } }
     function sendChatMessage() { const inp = document.getElementById('chat-input'); const msg = inp.value.trim(); if(msg && currentRoomCode) { socket.emit('send_chat', { roomCode: currentRoomCode, message: msg }); inp.value = ''; } }
     function handleChatEnter(e) { if(e.key === 'Enter') sendChatMessage(); }
-    socket.on('receive_chat', (data) => { const box = document.getElementById('chat-msgs-box'); const isMine = data.senderId === socket.id; const div = document.createElement('div'); div.className = `chat-msg-row ${isMine ? 'mine' : 'theirs'}`; div.innerHTML = `${!isMine ? `<div class="chat-sender">${data.senderName}</div>` : ''}<div class="chat-bubble">${data.message}</div>`; box.appendChild(div); box.scrollTop = box.scrollHeight; if(!document.getElementById('chat-popup').classList.contains('open')) { document.getElementById('chat-toggle-btn').classList.add('has-new-msg'); playSound('msg'); } });
+
+    // 🔥🔥 تعديل الشات لاستقبال الأفاتار
+    socket.on('receive_chat', (data) => { 
+        const box = document.getElementById('chat-msgs-box'); 
+        const isMine = data.senderId === socket.id; 
+        
+        // توليد الأفاتار للشات
+        const avatarSVG = generateSVG(data.avatarConfig || {color:0});
+
+        const div = document.createElement('div'); 
+        div.className = `chat-msg-row ${isMine ? 'mine' : 'theirs'}`; 
+        div.innerHTML = `
+            <div class="chat-avatar-small">${avatarSVG}</div>
+            <div class="chat-content">
+                ${!isMine ? `<div class="chat-sender">${data.senderName}</div>` : ''}
+                <div class="chat-bubble">${data.message}</div>
+            </div>
+        `; 
+        box.appendChild(div); 
+        box.scrollTop = box.scrollHeight; 
+        if(!document.getElementById('chat-popup').classList.contains('open')) { 
+            document.getElementById('chat-toggle-btn').classList.add('has-new-msg'); 
+            playSound('msg'); 
+        } 
+    });
     
     // تشغيل التعديلات لأول مرة
     renderEditor();
