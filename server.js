@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
-const questionsData = require('./questions');
+const questionsData = require('./questions'); // تأكد أن ملف الأسئلة موجود بنفس الاسم
 
 const app = express();
 const server = http.createServer(app);
@@ -20,12 +20,24 @@ const players = {};
 
 function generateRoomCode() { return Math.floor(1000 + Math.random() * 9000).toString(); }
 
+// دالة توحيد الأرقام (موجودة سابقاً)
 function normalizeCode(input) {
     if (!input) return "";
     return input.toString()
         .replace(/[٠١٢٣٤٥٦٧٨٩]/g, d => d.charCodeAt(0) - 1632)
         .replace(/[۰۱۲۳٤۵۶۷۸۹]/g, d => d.charCodeAt(0) - 1776)
         .trim();
+}
+
+// 🔥 دالة جديدة: توحيد النصوص العربية (لحل مشكلة تطابق الإجابات)
+function normalizeText(text) {
+    if (!text) return "";
+    return text.toString().trim()
+        .replace(/[أإآ]/g, 'ا')  // توحيد الألف
+        .replace(/ى/g, 'ي')      // توحيد الياء
+        .replace(/ة/g, 'ه')      // التاء المربوطة
+        .replace(/[\u064B-\u065F]/g, '') // إزالة التشكيل
+        .toLowerCase();
 }
 
 io.on('connection', (socket) => {
@@ -125,6 +137,7 @@ io.on('connection', (socket) => {
 
         socket.join(room.code);
 
+        // نقل الإجابات والتصويتات للـ ID الجديد
         if (room.roundData) {
             if (room.roundData.answers && room.roundData.answers[oldSocketId]) {
                 room.roundData.answers[socket.id] = room.roundData.answers[oldSocketId];
@@ -142,10 +155,24 @@ io.on('connection', (socket) => {
     }
 
     function sendCurrentStateToRejoiner(socket, room, player) {
+        // 🔥 إصلاح: حساب الوقت المتبقي عند إعادة الدخول
+        let timeRemaining = 0;
+        if (room.gameState === 'input' && room.roundData.startTime) {
+             const timeElapsed = (Date.now() - room.roundData.startTime) / 1000;
+             timeRemaining = Math.max(0, room.settings.time - timeElapsed);
+        }
+
         socket.emit('rejoin_success', {
             roomCode: room.code, name: player.name, isHost: player.isHost, players: room.players, gameState: room.gameState,
             topicData: (room.gameState === 'picking_topic') ? { chooserId: room.roundData.chooserId, chooserName: players[room.roundData.chooserId]?.name, availableTopics: room.settings.topics } : null,
-            questionData: (room.gameState === 'input' || room.gameState === 'voting') ? { question: room.roundData.currentQuestion.q, inputType: 'text' } : null,
+            
+            // 🔥 إرسال timeRemaining للكلاينت
+            questionData: (room.gameState === 'input' || room.gameState === 'voting') ? { 
+                question: room.roundData.currentQuestion.q, 
+                inputType: 'text',
+                timeRemaining: timeRemaining 
+            } : null,
+
             voteOptions: (room.gameState === 'voting') ? room.roundData.voteOptions : null,
             resultData: (room.gameState === 'results') ? { truth: room.roundData.currentQuestion.truth, leaderboard: getLeaderboard(room), hostId: room.hostId, isFinal: (room.currentRound >= room.settings.rounds) } : null,
             hasAnswered: (room.gameState === 'input' && room.roundData.answers && room.roundData.answers[socket.id]),
@@ -179,17 +206,22 @@ io.on('connection', (socket) => {
         room.gameState = 'picking_topic'; room.currentRound++;
         if (!room.availableChoosers || room.availableChoosers.length === 0) room.availableChoosers = room.players.map(p => p.id);
         room.availableChoosers = room.availableChoosers.filter(id => players[id]); 
+        
         const idx = Math.floor(Math.random() * room.availableChoosers.length);
         const chooserId = room.availableChoosers[idx]; room.availableChoosers.splice(idx, 1);
+        
+        // 🔥 إصلاح: التأكد من أن اللاعب لا يزال موجوداً لتجنب الـ Crash
         const chooser = room.players.find(p => p.id === chooserId);
-        if (!chooser) return startTopicPhase(room);
+        if (!chooser) {
+            return startTopicPhase(room); // إعادة المحاولة إذا كان اللاعب غادر
+        }
+
         room.roundData = { chooserId: chooser.id, chooserName: chooser.name, answers: {}, votes: {}, voteOptions: [] };
         io.to(room.code).emit('choose_topic_phase', { chooserId: chooser.id, chooserName: chooser.name, availableTopics: room.settings.topics });
     }
 
     socket.on('topic_selected', ({ roomCode, topic }) => { const room = rooms[roomCode]; if (room && socket.id === room.roundData.chooserId) startQuestionPhase(room, topic); });
 
-    // 🔥🔥 إصلاح التايمر في السيرفر 🔥🔥
     function startQuestionPhase(room, topicId) {
         room.gameState = 'input';
         let categoryQuestions = questionsData[topicId] || questionsData['variety'];
@@ -199,45 +231,73 @@ io.on('connection', (socket) => {
         const selectedQ = categoryQuestions[qIndex];
         room.roundData.currentQuestion = selectedQ; room.roundData.answers = {};
         
+        // 🔥 تسجيل وقت البدء
+        room.roundData.startTime = Date.now();
+
         io.to(room.code).emit('start_round', { question: selectedQ.q, inputType: 'text', time: room.settings.time });
 
-        // إعادة ضبط المؤقت بدقة
+        // إعادة ضبط المؤقت
         if (room.roundTimer) clearTimeout(room.roundTimer);
         
         room.roundTimer = setTimeout(() => {
-            // التحقق من أن الغرفة لا تزال موجودة وأن الحالة لا تزال "إدخال"
             if (rooms[room.code] && room.gameState === 'input') {
+                
+                // 🔥 إصلاح: تعبئة إجابات تلقائية للاعبين الخاملين (Idle)
+                room.players.forEach(p => {
+                    // إذا لم يجاوب وهو ليس الحكم (أو الحكم يلعب أيضاً)
+                    // هنا نفترض الجميع يلعبون
+                    if (!room.roundData.answers[p.id]) {
+                        const funnyLies = ["ما لحقت أكتب 🐢", "النت فصل 🔌", "أنا كذاب محترف 😎", "الإجابة هي 42", "نسيت السؤال 😅"];
+                        room.roundData.answers[p.id] = funnyLies[Math.floor(Math.random() * funnyLies.length)];
+                    }
+                });
+
                 console.log(`Timer ended for room ${room.code}, starting voting.`);
                 startVotingPhase(room);
             }
-        }, (room.settings.time + 1) * 1000); // 1 ثانية زيادة فقط للمزامنة
+        }, (room.settings.time + 1) * 1000); 
     }
 
     socket.on('submit_answer', ({ roomCode, answer }) => {
         const room = rooms[roomCode]; if (!room || room.gameState !== 'input') return;
         if (room.roundData.answers[socket.id]) return;
-        const cleanAns = answer.trim(); const truth = room.roundData.currentQuestion.truth;
-        if (cleanAns.toLowerCase() === truth.toLowerCase()) return socket.emit('truth_detected', 'يا ذكي! لازم تألف كذبة!');
+        
+        const cleanAns = answer.trim(); 
+        const truth = room.roundData.currentQuestion.truth;
+        
+        // 🔥 إصلاح: استخدام normalizeText لمقارنة الحقيقة
+        if (normalizeText(cleanAns) === normalizeText(truth)) {
+             return socket.emit('truth_detected', 'يا ذكي! دي الحقيقة، لازم تألف كذبة!');
+        }
+
         room.roundData.answers[socket.id] = cleanAns;
         io.to(roomCode).emit('player_done', socket.id);
         socket.emit('wait_for_others');
+        
+        // التحقق إذا الكل جاوب
         const activePlayersCount = room.players.filter(p => players[p.id]).length;
         if (Object.keys(room.roundData.answers).length >= activePlayersCount) startVotingPhase(room);
     });
 
     function startVotingPhase(room) {
-        if (room.roundTimer) clearTimeout(room.roundTimer); // إيقاف المؤقت فوراً
+        if (room.roundTimer) clearTimeout(room.roundTimer); 
         room.gameState = 'voting'; 
         const options = [{ text: room.roundData.currentQuestion.truth, type: 'TRUTH', id: 'truth' }];
         for (const [pid, ans] of Object.entries(room.roundData.answers)) options.push({ text: ans, type: 'LIE', id: pid });
         options.sort(() => Math.random() - 0.5);
         room.roundData.voteOptions = options; room.roundData.votes = {};
+        
+        // نرسل الخيارات مع الـ ID عشان الكلاينت يعرف يمنع التصويت للنفس
         io.to(room.code).emit('voting_phase', { options: options.map(o => ({ text: o.text, id: o.id })) });
     }
 
     socket.on('submit_vote', ({ roomCode, choiceData }) => {
         const room = rooms[roomCode]; if (!room || room.gameState !== 'voting') return;
         if (room.roundData.votes[socket.id]) return;
+        
+        // حماية إضافية في السيرفر: ممنوع التصويت للنفس
+        if (choiceData.id === socket.id) return;
+
         room.roundData.votes[socket.id] = choiceData.id; 
         io.to(roomCode).emit('player_voted', socket.id);
         const activePlayersCount = room.players.filter(p => players[p.id]).length;
