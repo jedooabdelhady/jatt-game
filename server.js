@@ -2,11 +2,12 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
-const questionsData = require('./questions'); 
+const questionsData = require('./questions'); // تأكد أن ملف الأسئلة موجود بنفس الاسم
 
 const app = express();
 const server = http.createServer(app);
 
+// إعدادات CORS
 const io = socketIo(server, {
     cors: { origin: "*", methods: ["GET", "POST"] }
 });
@@ -19,6 +20,7 @@ const players = {};
 
 function generateRoomCode() { return Math.floor(1000 + Math.random() * 9000).toString(); }
 
+// دالة توحيد الأرقام (موجودة سابقاً)
 function normalizeCode(input) {
     if (!input) return "";
     return input.toString()
@@ -27,19 +29,21 @@ function normalizeCode(input) {
         .trim();
 }
 
+// 🔥 دالة جديدة: توحيد النصوص العربية (لحل مشكلة تطابق الإجابات)
 function normalizeText(text) {
     if (!text) return "";
     return text.toString().trim()
-        .replace(/[أإآ]/g, 'ا')
-        .replace(/ى/g, 'ي')
-        .replace(/ة/g, 'ه')
-        .replace(/[\u064B-\u065F]/g, '')
+        .replace(/[أإآ]/g, 'ا')  // توحيد الألف
+        .replace(/ى/g, 'ي')      // توحيد الياء
+        .replace(/ة/g, 'ه')      // التاء المربوطة
+        .replace(/[\u064B-\u065F]/g, '') // إزالة التشكيل
         .toLowerCase();
 }
 
 io.on('connection', (socket) => {
     console.log('New connection:', socket.id);
 
+    // === إنشاء الغرفة ===
     socket.on('create_private_room', ({ name, avatarConfig, social }) => {
         let rawCode = generateRoomCode();
         let roomCode = normalizeCode(rawCode);
@@ -55,6 +59,7 @@ io.on('connection', (socket) => {
         joinRoom(socket, roomCode, name, avatarConfig, social, true);
     });
 
+    // === الانضمام ===
     socket.on('join_room', ({ code, name, avatarConfig, social }) => {
         const cleanCode = normalizeCode(code);
         if (rooms[cleanCode]) {
@@ -65,6 +70,7 @@ io.on('connection', (socket) => {
         }
     });
 
+    // دالة الدخول الموحدة
     function joinRoom(socket, code, name, avatarConfig, social, isHost) {
         const room = rooms[code];
         if (!room) { socket.emit('error_msg', 'الغرفة غير موجودة.'); return; }
@@ -85,15 +91,8 @@ io.on('connection', (socket) => {
         if (room.gameState !== 'lobby') { socket.emit('error_msg', 'اللعبة بدأت!'); return; }
         
         const newPlayer = {
-            id: socket.id, 
-            name: name, 
-            avatarConfig: avatarConfig, 
-            social: social || {},
-            roomCode: code, 
-            isHost: isHost, 
-            score: 0, 
-            lastPoints: 0,
-            afkCount: 0 
+            id: socket.id, name: name, avatarConfig: avatarConfig, social: social || {},
+            roomCode: code, isHost: isHost, score: 0, lastPoints: 0
         };
         
         players[socket.id] = newPlayer;
@@ -105,6 +104,7 @@ io.on('connection', (socket) => {
         if (isHost) socket.emit('go_to_setup', code);
     }
 
+    // === الريفريش ===
     socket.on('rejoin_game', ({ roomCode, name, avatarConfig, social }) => {
         const cleanCode = normalizeCode(roomCode);
         const room = rooms[cleanCode];
@@ -125,7 +125,6 @@ io.on('connection', (socket) => {
         const oldSocketId = player.id;
         
         player.id = socket.id; 
-        player.afkCount = 0; 
         if (newAvatar) player.avatarConfig = newAvatar;
         if (newSocial) player.social = newSocial;
         
@@ -138,6 +137,7 @@ io.on('connection', (socket) => {
 
         socket.join(room.code);
 
+        // نقل الإجابات والتصويتات للـ ID الجديد
         if (room.roundData) {
             if (room.roundData.answers && room.roundData.answers[oldSocketId]) {
                 room.roundData.answers[socket.id] = room.roundData.answers[oldSocketId];
@@ -155,6 +155,7 @@ io.on('connection', (socket) => {
     }
 
     function sendCurrentStateToRejoiner(socket, room, player) {
+        // 🔥 إصلاح: حساب الوقت المتبقي عند إعادة الدخول
         let timeRemaining = 0;
         if (room.gameState === 'input' && room.roundData.startTime) {
              const timeElapsed = (Date.now() - room.roundData.startTime) / 1000;
@@ -164,11 +165,14 @@ io.on('connection', (socket) => {
         socket.emit('rejoin_success', {
             roomCode: room.code, name: player.name, isHost: player.isHost, players: room.players, gameState: room.gameState,
             topicData: (room.gameState === 'picking_topic') ? { chooserId: room.roundData.chooserId, chooserName: players[room.roundData.chooserId]?.name, availableTopics: room.settings.topics } : null,
+            
+            // 🔥 إرسال timeRemaining للكلاينت
             questionData: (room.gameState === 'input' || room.gameState === 'voting') ? { 
                 question: room.roundData.currentQuestion.q, 
                 inputType: 'text',
                 timeRemaining: timeRemaining 
             } : null,
+
             voteOptions: (room.gameState === 'voting') ? room.roundData.voteOptions : null,
             resultData: (room.gameState === 'results') ? { truth: room.roundData.currentQuestion.truth, leaderboard: getLeaderboard(room), hostId: room.hostId, isFinal: (room.currentRound >= room.settings.rounds) } : null,
             hasAnswered: (room.gameState === 'input' && room.roundData.answers && room.roundData.answers[socket.id]),
@@ -206,8 +210,11 @@ io.on('connection', (socket) => {
         const idx = Math.floor(Math.random() * room.availableChoosers.length);
         const chooserId = room.availableChoosers[idx]; room.availableChoosers.splice(idx, 1);
         
+        // 🔥 إصلاح: التأكد من أن اللاعب لا يزال موجوداً لتجنب الـ Crash
         const chooser = room.players.find(p => p.id === chooserId);
-        if (!chooser) return startTopicPhase(room);
+        if (!chooser) {
+            return startTopicPhase(room); // إعادة المحاولة إذا كان اللاعب غادر
+        }
 
         room.roundData = { chooserId: chooser.id, chooserName: chooser.name, answers: {}, votes: {}, voteOptions: [] };
         io.to(room.code).emit('choose_topic_phase', { chooserId: chooser.id, chooserName: chooser.name, availableTopics: room.settings.topics });
@@ -223,74 +230,29 @@ io.on('connection', (socket) => {
         room.usedQuestions.push(`${topicId}-${qIndex}`);
         const selectedQ = categoryQuestions[qIndex];
         room.roundData.currentQuestion = selectedQ; room.roundData.answers = {};
+        
+        // 🔥 تسجيل وقت البدء
         room.roundData.startTime = Date.now();
 
         io.to(room.code).emit('start_round', { question: selectedQ.q, inputType: 'text', time: room.settings.time });
 
+        // إعادة ضبط المؤقت
         if (room.roundTimer) clearTimeout(room.roundTimer);
         
         room.roundTimer = setTimeout(() => {
             if (rooms[room.code] && room.gameState === 'input') {
                 
-                const playersToKick = [];
-                
-                // 1. تحديد من سيتم طرده ومن سيتم الإجابة نيابة عنه
+                // 🔥 إصلاح: تعبئة إجابات تلقائية للاعبين الخاملين (Idle)
                 room.players.forEach(p => {
-                    const playerObj = players[p.id];
+                    // إذا لم يجاوب وهو ليس الحكم (أو الحكم يلعب أيضاً)
+                    // هنا نفترض الجميع يلعبون
                     if (!room.roundData.answers[p.id]) {
-                        if (playerObj) {
-                            playerObj.afkCount = (playerObj.afkCount || 0) + 1;
-                            
-                            if (playerObj.afkCount >= 3) {
-                                playersToKick.push(p.id);
-                            } else {
-                                const funnyLies = ["ما لحقت أكتب 🐢", "النت فصل 🔌", "أنا كذاب محترف 😎", "الإجابة هي 42", "نسيت السؤال 😅"];
-                                room.roundData.answers[p.id] = funnyLies[Math.floor(Math.random() * funnyLies.length)];
-                            }
-                        }
-                    } else {
-                        if (playerObj) playerObj.afkCount = 0;
+                        const funnyLies = ["ما لحقت أكتب 🐢", "النت فصل 🔌", "أنا كذاب محترف 😎", "الإجابة هي 42", "نسيت السؤال 😅"];
+                        room.roundData.answers[p.id] = funnyLies[Math.floor(Math.random() * funnyLies.length)];
                     }
                 });
 
-                // 2. تنفيذ الطرد بشكل آمن (بدون تكرار Loop يسبب مشاكل)
-                // نستخدم نسخة من المصفوفة لضمان عدم تأثر التكرار
-                for (const pid of playersToKick) {
-                    const pName = players[pid] ? players[pid].name : "لاعب";
-                    
-                    // إعلام الغرفة
-                    io.to(room.code).emit('receive_chat', { 
-                        senderId: 'SYSTEM', 
-                        senderName: '🚫 النظام', 
-                        message: `تم طرد ${pName} بسبب الخمول (AFK) 💤` 
-                    });
-                    
-                    // إعلام اللاعب المطرود
-                    io.to(pid).emit('kicked_out');
-                    
-                    // البحث عن السوكيت وطرده
-                    const targetSocket = io.sockets.sockets.get(pid);
-                    
-                    // الطرد من منطق اللعبة
-                    // ملاحظة: leaveRoomLogic ستقوم بتعديل room.players
-                    if (targetSocket) {
-                        leaveRoomLogic(targetSocket, room.code);
-                        targetSocket.leave(room.code);
-                    } else {
-                        // حالة نادرة: السوكيت غير متصل لكن بياناته في الغرفة
-                        leaveRoomLogic({ id: pid }, room.code);
-                    }
-                }
-
                 console.log(`Timer ended for room ${room.code}, starting voting.`);
-                
-                // التحقق من بقاء لاعبين كافين بعد الطرد
-                if (room.players.length < 2 && rooms[room.code]) {
-                     io.to(room.code).emit('error_msg', 'عدد اللاعبين غير كافٍ للاستمرار.');
-                     // يمكن هنا إعادة اللعبة للوبي أو إنهاؤها
-                     // سنكمل للتصويت حتى لو بقي لاعب واحد لإنهاء الجولة بشكل طبيعي
-                }
-
                 startVotingPhase(room);
             }
         }, (room.settings.time + 1) * 1000); 
@@ -302,26 +264,17 @@ io.on('connection', (socket) => {
         
         const cleanAns = answer.trim(); 
         const truth = room.roundData.currentQuestion.truth;
-        const normalizedInput = normalizeText(cleanAns);
         
-        if (normalizedInput === normalizeText(truth)) {
+        // 🔥 إصلاح: استخدام normalizeText لمقارنة الحقيقة
+        if (normalizeText(cleanAns) === normalizeText(truth)) {
              return socket.emit('truth_detected', 'يا ذكي! دي الحقيقة، لازم تألف كذبة!');
         }
 
-        const isDuplicate = Object.values(room.roundData.answers).some(existingAns => 
-            normalizeText(existingAns) === normalizedInput
-        );
-
-        if (isDuplicate) {
-            return socket.emit('truth_detected', 'سبقك بها عكاشة! لاعب تاني كتب نفس الكذبة، ألف غيرها! 🏃‍♂️');
-        }
-
         room.roundData.answers[socket.id] = cleanAns;
-        if (players[socket.id]) players[socket.id].afkCount = 0; 
-
         io.to(roomCode).emit('player_done', socket.id);
         socket.emit('wait_for_others');
         
+        // التحقق إذا الكل جاوب
         const activePlayersCount = room.players.filter(p => players[p.id]).length;
         if (Object.keys(room.roundData.answers).length >= activePlayersCount) startVotingPhase(room);
     });
@@ -330,23 +283,20 @@ io.on('connection', (socket) => {
         if (room.roundTimer) clearTimeout(room.roundTimer); 
         room.gameState = 'voting'; 
         const options = [{ text: room.roundData.currentQuestion.truth, type: 'TRUTH', id: 'truth' }];
-        
-        // التأكد من أن الإجابات لأشخاص مازالوا موجودين (احتياطاً بعد الطرد)
-        for (const [pid, ans] of Object.entries(room.roundData.answers)) {
-            // نضيف الإجابة حتى لو طرد اللاعب في هذه اللحظة للحفاظ على نزاهة الجولة الحالية
-            options.push({ text: ans, type: 'LIE', id: pid });
-        }
-        
+        for (const [pid, ans] of Object.entries(room.roundData.answers)) options.push({ text: ans, type: 'LIE', id: pid });
         options.sort(() => Math.random() - 0.5);
         room.roundData.voteOptions = options; room.roundData.votes = {};
         
+        // نرسل الخيارات مع الـ ID عشان الكلاينت يعرف يمنع التصويت للنفس
         io.to(room.code).emit('voting_phase', { options: options.map(o => ({ text: o.text, id: o.id })) });
     }
 
     socket.on('submit_vote', ({ roomCode, choiceData }) => {
         const room = rooms[roomCode]; if (!room || room.gameState !== 'voting') return;
         if (room.roundData.votes[socket.id]) return;
-        if (choiceData.id === socket.id) return; 
+        
+        // حماية إضافية في السيرفر: ممنوع التصويت للنفس
+        if (choiceData.id === socket.id) return;
 
         room.roundData.votes[socket.id] = choiceData.id; 
         io.to(roomCode).emit('player_voted', socket.id);
@@ -388,12 +338,8 @@ io.on('connection', (socket) => {
                 io.to(room.code).emit('receive_chat', { senderId: 'SYSTEM', senderName: '🚫 النظام', message: `تم طرد ${targetName}!` });
                 io.to(targetId).emit('kicked_out');
                 const targetSocket = io.sockets.sockets.get(targetId);
-                if (targetSocket) {
-                    leaveRoomLogic(targetSocket, room.code);
-                    targetSocket.leave(room.code);
-                } else {
-                    leaveRoomLogic({ id: targetId }, room.code);
-                }
+                if (targetSocket) { leaveRoomLogic(targetSocket, room.code); targetSocket.leave(room.code); }
+                else { leaveRoomLogic({ id: targetId }, room.code); }
                 delete room.kickVotes[targetId];
             }
         }
@@ -411,7 +357,7 @@ io.on('connection', (socket) => {
 
     socket.on('restart_game', (roomCode) => {
         const room = rooms[roomCode]; if (room) {
-            room.currentRound = 0; room.players.forEach(p => { p.score = 0; p.lastPoints = 0; p.afkCount = 0; }); room.gameState = 'lobby'; room.usedQuestions = []; room.availableChoosers = [];
+            room.currentRound = 0; room.players.forEach(p => { p.score = 0; p.lastPoints = 0; }); room.gameState = 'lobby'; room.usedQuestions = []; room.availableChoosers = [];
             io.to(roomCode).emit('update_lobby', { code: roomCode, players: room.players, hostId: room.hostId });
         }
     });
@@ -421,27 +367,15 @@ io.on('connection', (socket) => {
 
     function leaveRoomLogic(socket, code) {
         const room = rooms[code]; if (room) {
-            // حذف اللاعب من قائمة الغرفة
             room.players = room.players.filter(p => p.id !== socket.id);
-            
-            // حذف اللاعب من قائمة المختارين إذا كان فيها
             if (room.availableChoosers) room.availableChoosers = room.availableChoosers.filter(id => id !== socket.id);
-            
-            // حذف أي تصويتات طرد ضده أو منه
             if (room.kickVotes && room.kickVotes[socket.id]) delete room.kickVotes[socket.id];
-            
-            // نقل الهوست إذا كان هو الهوست وخرج
             if (socket.id === room.hostId && room.players.length > 0) { room.hostId = room.players[0].id; room.players[0].isHost = true; }
-            
-            // إذا فرغت الغرفة تماماً
             if (room.players.length === 0) {
                 if (room.roundTimer) clearTimeout(room.roundTimer); 
                 delete rooms[code];
             }
-            else { 
-                io.to(code).emit('player_left_update', room.players); 
-                if (room.gameState === 'lobby') io.to(code).emit('update_lobby', { code: code, players: room.players, hostId: room.hostId }); 
-            }
+            else { io.to(code).emit('player_left_update', room.players); if (room.gameState === 'lobby') io.to(code).emit('update_lobby', { code: code, players: room.players, hostId: room.hostId }); }
         }
     }
 });
