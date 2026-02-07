@@ -29,11 +29,14 @@ function normalizeCode(input) {
 }
 
 function initPermanentRooms() {
+    // جميع المواضيع المتاحة لضمان عدم وجود مصفوفة فارغة
+    const allTopics = ['football','variety', 'weird', 'guinness','sudanese','math', 'science', 'history', 'tech','songs','inventors','arts','anime','flags','geography','movies'];
+    
     const permRooms = [
-        { code: "1000", name: "Room num 1", topics: ['football','variety', 'weird', 'guinness','sudanese','math', 'science', 'history', 'tech','songs','inventors','arts','anime','flags','geography','movies'] },
-        { code: "2000", name: "Room num 2", topics: ['football','variety', 'weird', 'guinness','sudanese','math', 'science', 'history', 'tech','songs','inventors','arts','anime','flags','geography','movies'] },
-        { code: "3000", name: "Room num 3", topics: ['football','variety', 'weird', 'guinness','sudanese','math', 'science', 'history', 'tech','songs','inventors','arts','anime','flags','geography','movies'] },
-        { code: "4000", name: "Room num 4", topics: ['football','variety', 'weird', 'guinness','sudanese','math', 'science', 'history', 'tech','songs','inventors','arts','anime','flags','geography','movies'] }
+        { code: "1000", name: "⚽ كورة وبس", topics: ['football'] },
+        { code: "2000", name: "🎲 منوعات", topics: ['variety', 'weird', 'guinness'] },
+        { code: "3000", name: "🇸🇩 قعدة سودانية", topics: ['sudanese'] },
+        { code: "4000", name: "🧠 تحدي شامل", topics: allTopics } // جميع المواضيع
     ];
 
     permRooms.forEach(p => {
@@ -48,7 +51,7 @@ function initPermanentRooms() {
             isPublic: true,
             isPermanent: true,
             roomName: p.name,
-            readyPlayers: [] // 🔥 قائمة اللاعبين الجاهزين
+            readyPlayers: [] 
         };
         console.log(`✅ Permanent Room Created: ${p.name} (${p.code})`);
     });
@@ -67,13 +70,13 @@ io.on('connection', (socket) => {
 
         rooms[roomCode] = {
             code: roomCode, hostId: socket.id, players: [], gameState: 'lobby',
-            settings: { rounds: 5, time: 30, maxPlayers: 8, topics: [] },
+            settings: { rounds: 5, time: 30, maxPlayers: 8, topics: [] }, // سيتم تحديث المواضيع لاحقاً من save_settings
             currentRound: 0, scores: {}, roundData: {}, usedQuestions: [], availableChoosers: [],
             kickVotes: {}, roundTimer: null,
             isPublic: isPublic || false,
             hostName: name,
             isPermanent: false,
-            readyPlayers: [] // 🔥
+            readyPlayers: []
         };
         joinRoom(socket, roomCode, name, avatarConfig, social, true);
     });
@@ -102,12 +105,10 @@ io.on('connection', (socket) => {
         if (rooms[cleanCode]) {
             if (rooms[cleanCode].players.length >= rooms[cleanCode].settings.maxPlayers) return socket.emit('error_msg', 'الغرفة ممتلئة!');
             let isHost = false;
-            // في الغرف العامة، لا أحد هوست (إلا إذا كانت خاصة جعلت عامة)
+            // في الغرف العامة، لا أحد هوست (إلا إذا كانت خاصة وتحولت لعامة)
             if (!rooms[cleanCode].isPermanent && rooms[cleanCode].players.length === 0) {
                 isHost = true;
                 rooms[cleanCode].hostId = socket.id;
-            } else if (rooms[cleanCode].isPermanent) {
-                isHost = false; // الغرف الدائمة لا هوست لها في النظام الجديد
             }
             joinRoom(socket, cleanCode, name, avatarConfig, social, isHost);
         } else {
@@ -140,7 +141,6 @@ io.on('connection', (socket) => {
         room.players.push(newPlayer);
         room.scores[socket.id] = 0;
         
-        // تحديث حالة الجاهزية (إرسال عدد الجاهزين)
         io.to(code).emit('update_lobby', { 
             code: code, 
             players: room.players, 
@@ -180,7 +180,6 @@ io.on('connection', (socket) => {
         
         if (player.isHost) room.hostId = socket.id;
 
-        // تحديث قائمة الجاهزين بالـ ID الجديد
         if(room.readyPlayers.includes(oldSocketId)) {
             room.readyPlayers = room.readyPlayers.filter(id => id !== oldSocketId);
             room.readyPlayers.push(socket.id);
@@ -188,7 +187,7 @@ io.on('connection', (socket) => {
 
         socket.join(room.code);
 
-        // نقل بيانات الجولة
+        // نقل البيانات
         if (room.roundData) {
             if (room.roundData.answers && room.roundData.answers[oldSocketId]) {
                 room.roundData.answers[socket.id] = room.roundData.answers[oldSocketId];
@@ -216,44 +215,60 @@ io.on('connection', (socket) => {
                 leaderboard: getLeaderboard(room), 
                 hostId: room.hostId, 
                 isFinal: (room.currentRound >= room.settings.rounds),
-                isPublic: room.isPublic, // 🔥
-                readyCount: room.readyPlayers.length // 🔥
+                isPublic: room.isPublic,
+                readyCount: room.readyPlayers.length 
             } : null,
             hasAnswered: (room.gameState === 'input' && room.roundData.answers && room.roundData.answers[socket.id]),
             hasVoted: (room.gameState === 'voting' && room.roundData.votes && room.roundData.votes[socket.id]),
             donePlayers: (room.gameState === 'input') ? Object.keys(room.roundData.answers || {}) : [],
             votedPlayers: (room.gameState === 'voting') ? Object.keys(room.roundData.votes || {}) : [],
-            isReady: room.readyPlayers.includes(socket.id), // 🔥 هل أنا جاهز؟
+            isReady: room.readyPlayers.includes(socket.id),
             isPublic: room.isPublic
         });
     }
 
-    // === 🔥 نظام التصويت الجديد (Toggle Ready) ===
+    socket.on('send_chat', ({ roomCode, message }) => { 
+        if (!message || !message.trim()) return; 
+        const player = players[socket.id]; 
+        io.to(roomCode).emit('receive_chat', { 
+            senderId: socket.id, 
+            senderName: player ? player.name : 'مجهول', 
+            avatarConfig: player ? player.avatarConfig : {color:0},
+            message: message 
+        }); 
+    });
+
+    socket.on('save_settings', ({ roomCode, settings }) => { 
+        if (rooms[roomCode]) {
+            rooms[roomCode].settings = { ...rooms[roomCode].settings, ...settings }; 
+            // تأكد من أن المصفوفة topics موجودة وليست فارغة
+            if(!rooms[roomCode].settings.topics || rooms[roomCode].settings.topics.length === 0) {
+                rooms[roomCode].settings.topics = ['variety']; // قيمة افتراضية
+            }
+        }
+    });
+    
+    // === Toggle Ready ===
     socket.on('toggle_ready', (roomCode) => {
         const room = rooms[roomCode];
         if (!room) return;
 
         if (room.readyPlayers.includes(socket.id)) {
-            room.readyPlayers = room.readyPlayers.filter(id => id !== socket.id); // إلغاء الجاهزية
+            room.readyPlayers = room.readyPlayers.filter(id => id !== socket.id);
         } else {
-            room.readyPlayers.push(socket.id); // أصبح جاهزاً
+            room.readyPlayers.push(socket.id);
         }
 
-        // إرسال تحديث للجميع
         io.to(roomCode).emit('update_ready_status', { 
             readyCount: room.readyPlayers.length, 
             totalPlayers: room.players.length,
             readyIds: room.readyPlayers
         });
 
-        // التحقق: هل الجميع جاهز؟
         if (room.players.length > 1 && room.readyPlayers.length === room.players.length) {
-            // إذا كنا في اللوبي -> ابدأ اللعبة
             if (room.gameState === 'lobby') {
                 startTopicPhase(room);
-            } 
-            // إذا كنا في شاشة النتائج -> الجولة التالية
-            else if (room.gameState === 'results') {
+            } else if (room.gameState === 'results') {
                 if (room.currentRound >= room.settings.rounds) {
                     const winner = room.players.reduce((p, c) => (p.score > c.score) ? p : c);
                     const loser = room.players.reduce((p, c) => (p.score < c.score) ? p : c);
@@ -266,19 +281,16 @@ io.on('connection', (socket) => {
         }
     });
 
-    // === (تعديل) بدء اللعبة (للغرف الخاصة فقط) ===
     socket.on('start_game_flow', (roomCode) => {
         const room = rooms[roomCode]; if (!room) return;
-        // في الغرف العامة، نمنع الهوست من البدء يدوياً (يجب التصويت)
         if (room.isPublic) return; 
         if (room.players.length < 2) return socket.emit('error_msg', 'لازم لاعبين اثنين على الأقل!');
         room.availableChoosers = []; startTopicPhase(room);
     });
 
-    // === (تعديل) التالي (للغرف الخاصة فقط) ===
     socket.on('next_step', (roomCode) => {
         const room = rooms[roomCode]; if (!room) return;
-        if (room.isPublic) return; // ممنوع في العامة
+        if (room.isPublic) return; 
         if (room.currentRound >= room.settings.rounds) {
             const winner = room.players.reduce((p, c) => (p.score > c.score) ? p : c);
             const loser = room.players.reduce((p, c) => (p.score < c.score) ? p : c);
@@ -287,22 +299,35 @@ io.on('connection', (socket) => {
         } else startTopicPhase(room);
     });
 
+    // 🔥🔥🔥 دالة بدء الجولة (المصححة) 🔥🔥🔥
     function startTopicPhase(room) {
         if (room.roundTimer) clearTimeout(room.roundTimer); 
         room.gameState = 'picking_topic'; room.currentRound++;
-        room.readyPlayers = []; // تصفير الجاهزية للجولة الجديدة
+        room.readyPlayers = []; 
         
+        // 1. إعادة تعبئة قائمة من عليه الدور (Choosers)
         if (!room.availableChoosers || room.availableChoosers.length === 0) room.availableChoosers = room.players.map(p => p.id);
         room.availableChoosers = room.availableChoosers.filter(id => players[id]); 
-        
+        if (room.availableChoosers.length === 0) room.availableChoosers = room.players.map(p => p.id);
+
+        // 2. اختيار لاعب عشوائي ليكون "الذي عليه الدور"
         const idx = Math.floor(Math.random() * room.availableChoosers.length);
         const chooserId = room.availableChoosers[idx]; room.availableChoosers.splice(idx, 1);
-        
         const chooser = room.players.find(p => p.id === chooserId);
-        if (!chooser) return startTopicPhase(room);
+        
+        if (!chooser) return startTopicPhase(room); // محاولة مرة أخرى إذا حدث خطأ
         
         room.roundData = { chooserId: chooser.id, chooserName: chooser.name, answers: {}, votes: {}, voteOptions: [] };
-        io.to(room.code).emit('choose_topic_phase', { chooserId: chooser.id, chooserName: chooser.name, availableTopics: room.settings.topics });
+
+        // 3. التأكد من وجود مواضيع لإرسالها!
+        const topicsToSend = room.settings.topics && room.settings.topics.length > 0 ? room.settings.topics : ['variety'];
+
+        // 4. إرسال البيانات للواجهة
+        io.to(room.code).emit('choose_topic_phase', { 
+            chooserId: chooser.id, 
+            chooserName: chooser.name, 
+            availableTopics: topicsToSend // 🔥 إرسال المواضيع الصحيحة هنا
+        });
     }
 
     socket.on('topic_selected', ({ roomCode, topic }) => { const room = rooms[roomCode]; if (room && socket.id === room.roundData.chooserId) startQuestionPhase(room, topic); });
@@ -363,13 +388,12 @@ io.on('connection', (socket) => {
             if (choiceId === 'truth') { voter.score += 2; voter.lastPoints += 2; }
             else { const liar = players[choiceId]; if (liar && choiceId !== voterId) { liar.score += 1; liar.lastPoints += 1; } }
         }
-        
         io.to(room.code).emit('show_results', { 
             truth: room.roundData.currentQuestion.truth, 
             leaderboard: getLeaderboard(room), 
             isFinal: (room.currentRound >= room.settings.rounds), 
             hostId: room.hostId,
-            isPublic: room.isPublic, // 🔥 لتحديد نوع الأزرار
+            isPublic: room.isPublic,
             readyCount: room.readyPlayers.length
         });
     }
@@ -403,13 +427,12 @@ io.on('connection', (socket) => {
     socket.on('restart_game', (roomCode) => {
         const room = rooms[roomCode]; if (room) {
             room.currentRound = 0; room.players.forEach(p => { p.score = 0; p.lastPoints = 0; }); room.gameState = 'lobby'; room.usedQuestions = []; room.availableChoosers = [];
-            room.readyPlayers = []; // تصفير الجاهزية
+            room.readyPlayers = []; 
             io.to(roomCode).emit('update_lobby', { code: roomCode, players: room.players, hostId: room.hostId, isPublic: room.isPublic, readyCount: 0 });
         }
     });
 
     socket.on('leave_game', (roomCode) => leaveRoomLogic(socket, roomCode));
-    socket.on('send_chat', ({ roomCode, message }) => { if (!message || !message.trim()) return; io.to(roomCode).emit('receive_chat', { senderId: socket.id, senderName: players[socket.id]?.name, message: message }); });
     socket.on('disconnect', () => { console.log('Disconnect:', socket.id); }); 
 
     function leaveRoomLogic(socket, code) {
@@ -418,7 +441,6 @@ io.on('connection', (socket) => {
             if (room.availableChoosers) room.availableChoosers = room.availableChoosers.filter(id => id !== socket.id);
             if (room.kickVotes && room.kickVotes[socket.id]) delete room.kickVotes[socket.id];
             
-            // إزالة من قائمة الجاهزين وتحديث العد
             if(room.readyPlayers.includes(socket.id)) {
                 room.readyPlayers = room.readyPlayers.filter(id => id !== socket.id);
                 io.to(code).emit('update_ready_status', { readyCount: room.readyPlayers.length, totalPlayers: room.players.length, readyIds: room.readyPlayers });
