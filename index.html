@@ -125,11 +125,13 @@
         <div id="home-btn-avatar" style="width:100%; height:100%;"></div>
     </div>
     <button id="chat-toggle-btn" onclick="toggleChat()">💬</button>
+    
     <div id="chat-popup">
         <div class="chat-header" id="chat-drag-handle"><span>Small Chat 😜</span><span class="chat-close" onclick="toggleChat()">×</span></div>
         <div class="chat-messages-area" id="chat-msgs-box"></div>
         <div class="chat-input-area"><input type="text" id="chat-input" placeholder="اكتب شي..." onkeypress="handleChatEnter(event)"><button class="chat-send-btn" style="background:var(--primary); color:white; border:none; width:35px; height:35px; border-radius:50%; cursor:pointer;" onclick="sendChatMessage()">➤</button></div>
     </div>
+
     <div id="player-info-modal" onclick="closePlayerModal(event)">
         <div class="player-info-card">
             <div id="modal-avatar" class="home-avatar-box" style="margin: 0 auto 10px;"></div>
@@ -140,6 +142,7 @@
             <button onclick="document.getElementById('player-info-modal').classList.remove('open')" class="btn btn-outline" style="margin-top: 10px;">إغلاق</button>
         </div>
     </div>
+    
     <div id="screen-reg" class="screen">
         <h2 style="font-size:2rem; margin-bottom:10px;">أهلاً بك في جاطت 👋</h2>
         <p style="margin-bottom:15px; opacity:0.7;">صمم شخصيتك عشان تدخل</p>
@@ -155,6 +158,7 @@
         </div>
         <div class="btn-container"><button class="btn btn-primary" onclick="saveRegistration()">🚀 حفظ ودخول اللعبة</button></div>
     </div>
+
     <div id="home-screen" class="screen active">
         <h1>جاطت 🎲</h1>
         <div id="my-avatar-home" class="home-avatar-box"></div>
@@ -165,6 +169,7 @@
         </div>
         <p id="reconnect-msg" style="display:none; color:var(--primary); margin-top:10px;">جاري استعادة اللعبة... ⏳</p>
     </div>
+
     <div id="public-rooms-screen" class="screen">
         <h2>غرف مفتوحة 🌍</h2>
         <div id="public-rooms-list" style="width:100%; flex-grow:1; overflow-y:auto; padding:5px;">
@@ -174,6 +179,7 @@
             <button class="btn btn-outline" onclick="goHome()">رجوع</button>
         </div>
     </div>
+
     <div id="profile-screen" class="screen">
         <div class="card-box">
             <div id="profile-avatar"></div>
@@ -189,8 +195,9 @@
         </div>
         <div class="btn-container"><button class="btn btn-primary" onclick="goToEditVisuals()">✏️ تعديل شكل الشخصية</button><button class="btn btn-outline" onclick="goHome()">رجوع</button></div>
     </div>
+
     <div id="screen-edit-visuals" class="screen">
-        <h2>Your Character ✨</h2>
+        <h2>نيو لوك ✨</h2>
         <div class="avatar-preview-box" id="edit-avatar-preview"></div>
         <div class="input-group"><input type="text" id="edit-name-input" placeholder="تغيير الاسم..." maxlength="12"></div>
         <div class="avatar-controls" style="grid-template-columns: repeat(3, 1fr);">
@@ -200,12 +207,15 @@
         </div>
         <div class="btn-container"><button class="btn btn-primary" onclick="saveVisualsAndReturn()">حفظ ✅</button></div>
     </div>
+
     <div id="name-input-screen" class="screen"><h2>من أنت؟</h2><div class="input-group"><input type="text" id="public-name" placeholder="..."></div><button class="btn btn-outline" onclick="goHome()">رجوع</button></div>
+    
     <div id="setup-screen" class="screen">
         <h2>إعدادات جاطت ⚙️</h2>
         <div class="input-group"><label>عدد الجولات: <span id="rounds-display" style="color:var(--primary)">5</span></label><input type="range" id="rounds-setting" min="3" max="30" value="5" oninput="document.getElementById('rounds-display').innerText=this.value"></div>
         <div class="input-group"><label>وقت الإجابة: <span id="time-display" style="color:var(--primary)">30</span> ثانية</label><input type="range" id="time-setting" min="15" max="60" value="30" oninput="document.getElementById('time-display').innerText=this.value"></div>
         <div class="input-group"><label>عدد اللاعبين: <span id="players-display" style="color:var(--primary)">8</span></label><input type="range" id="max-players" min="2" max="30" value="8" oninput="document.getElementById('players-display').innerText=this.value"></div>
+        
         <div class="toggle-switch">
             <span style="font-weight:bold; color:var(--text-main);">🌍 غرفة عامة (يظهر للجميع)</span>
             <label class="toggle-container">
@@ -213,9 +223,12 @@
                 <span class="toggle-slider"></span>
             </label>
         </div>
+
         <div class="btn-container"><button class="btn btn-secondary" onclick="goToTopicsSetup()">التالي: المواضيع 📋</button><button class="btn btn-outline" onclick="goHome()">إلغاء</button></div>
     </div>
+
     <div id="topics-setup-screen" class="screen"><h2>اختر المواضيع 📂</h2><div class="topics-grid" id="topics-config-grid"></div><br><div class="btn-container"><button class="btn btn-primary" onclick="createRoom()">✅ إنشاء الغرفة</button><button class="btn btn-outline" onclick="showScreen('setup-screen')">رجوع</button></div></div>
+    
     <div id="lobby-screen" class="screen">
         <div style="text-align:center; margin-bottom:20px;"><span style="font-size:0.9rem; opacity:0.7;">رمز الغرفة</span><div id="room-code-display" style="font-size:2.5rem; font-weight:900; color:var(--primary); letter-spacing:5px;">....</div><button onclick="copyInviteLink()" class="btn btn-outline" style="margin-top:10px; font-size:0.9rem; padding:8px;">🔗 نسخ الرابط</button></div>
         <h3 style="align-self:flex-start; margin-right:10px;">اللاعبين 👇</h3><div class="lobby-list" id="lobby-players"></div>
@@ -233,7 +246,14 @@
             <p id="guest-wait-msg" style="display:none; color: var(--primary);">بانتظار المضيف...</p>
         </div>
     </div>
-    <div id="topic-screen" class="screen"><h2 id="chooser-msg">...</h2><div class="topics-grid" id="topics-container"></div></div>
+    
+    <div id="topic-screen" class="screen"><h2 id="chooser-msg">...</h2>
+        <div id="auto-pick-msg" style="display:none; text-align:center; margin-top:20px;">
+            <p style="font-size:1.2rem; color:var(--primary);">جاري اختيار موضوع عشوائي... 🎲</p>
+        </div>
+        <div class="topics-grid" id="topics-container"></div>
+    </div>
+
     <div id="game-screen" class="screen">
         <div class="timer-bar" id="game-timer"></div>
         <div class="question-box"><p id="question-text" style="color: var(--text-main); font-weight: 800; font-size: 1.3rem; margin: 0; line-height: 1.5;">...</p></div>
@@ -278,7 +298,11 @@
     const hats = [ `<g transform="translate(50, -5)"><path d="M-35 20 Q-45 5 -25 0" stroke="#3d3d3d" stroke-width="3" fill="#f1f2f6"/><path d="M35 20 Q45 5 25 0" stroke="#3d3d3d" stroke-width="3" fill="#f1f2f6"/><path d="M-25 30 Q-25 5 0 5 Q25 5 25 30" fill="#cd6133" stroke="#3d3d3d" stroke-width="3"/><path d="M-28 30 L28 30 L28 35 L-28 35 Z" fill="#b2bec3" stroke="#3d3d3d" stroke-width="3"/><path d="M-5 35 L-5 5 L5 5 L5 35 Z" fill="#b2bec3" stroke="#3d3d3d" stroke-width="3"/></g>`, ``, `<g transform="translate(50, -10)"><path d="M-20 25 L-20 5 L-10 20 L0 5 L10 20 L20 5 L20 25 Z" fill="#feca57" stroke="#3d3d3d" stroke-width="3"/></g>`, `<g transform="translate(50, -15)"><rect x="-2" y="0" width="4" height="15" fill="#1dd1a1" stroke="#3d3d3d" stroke-width="2"/><circle cx="5" cy="20" r="10" fill="#ff6b6b" stroke="#3d3d3d" stroke-width="3"/><circle cx="-5" cy="22" r="10" fill="#ff6b6b" stroke="#3d3d3d" stroke-width="3"/></g>`, `<g transform="translate(50, -10)"><path d="M-25 25 L25 25 L30 15 L-30 15 Z" fill="#2d3436" stroke="#3d3d3d" stroke-width="3"/><path d="M-25 15 Q-25 -5 0 -5 Q25 -5 25 15" fill="#0984e3" stroke="#3d3d3d" stroke-width="3"/><circle cx="0" cy="10" r="5" fill="#feca57"/></g>`, `<g transform="translate(50, -20)"><rect x="-25" y="20" width="50" height="5" fill="#2d3436" stroke="#3d3d3d"/><path d="M-15 20 L-10 -10 L10 -10 L15 20 Z" fill="#2d3436" stroke="#3d3d3d" stroke-width="2"/><rect x="-15" y="15" width="30" height="5" fill="#d63031"/></g>`, `<g transform="translate(50, -10)"><path d="M-35 15 Q0 25 35 15 L30 5 Q0 10 -30 5 Z" fill="#8B4513" stroke="#3d3d3d" stroke-width="2"/><rect x="-15" y="0" width="30" height="15" fill="#8B4513" stroke="#3d3d3d"/><rect x="-15" y="10" width="30" height="5" fill="#6D214F"/></g>`, `<g transform="translate(50, 0)"><path d="M-30 30 Q-30 -10 30 30" fill="none" stroke="#3d3d3d" stroke-width="6"/><rect x="-38" y="20" width="12" height="25" rx="5" fill="#74b9ff" stroke="#3d3d3d" stroke-width="2"/><rect x="26" y="20" width="12" height="25" rx="5" fill="#74b9ff" stroke="#3d3d3d" stroke-width="2"/></g>`, `<g transform="translate(50, -15)"><path d="M0 20 Q5 5 15 0 Q5 5 0 20 Q-5 5 -15 0 Q-5 5 0 20" fill="#badc58" stroke="#3d3d3d" stroke-width="2"/><rect x="-8" y="20" width="16" height="12" fill="#e17055" stroke="#3d3d3d" stroke-width="2"/></g>`, `<g transform="translate(50, 0)"><path d="M-22 5 Q-30 40 -15 50 L 15 50 Q 30 40 22 5 Q 0 -10 -22 5" fill="#4b3621" stroke="#3d3d3d" stroke-width="2"/></g>`, `<g transform="translate(50, -10)"><circle cx="0" cy="0" r="15" fill="#5d4037" stroke="#3d3d3d" stroke-width="2"/><path d="M-5 5 Q0 10 5 5" fill="none" stroke="#ff7675" stroke-width="3"/></g>`, `<g transform="translate(50, -5)"><path d="M-20 10 L-25 -5 L-10 5 Z" fill="#3d3d3d"/><path d="M20 10 L25 -5 L10 5 Z" fill="#3d3d3d"/></g>` ];
     const faces = [ `<g transform="translate(50, 35)"><path d="M-20 0 Q-10 10 0 0 Z" fill="white" stroke="#3d3d3d" stroke-width="2.5" transform="translate(-10, 0)"/><path d="M-20 0 Q-10 10 0 0 Z" fill="white" stroke="#3d3d3d" stroke-width="2.5" transform="translate(25, 0)"/><circle cx="-18" cy="3" r="2" fill="black"/><circle cx="18" cy="3" r="2" fill="black"/><path d="M-15 20 L-10 15 L-5 20 L0 15 L5 20 L10 15 L15 20" fill="none" stroke="#3d3d3d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>`, `<g transform="translate(50, 40)"><circle cx="-15" cy="0" r="4" fill="black"/><circle cx="15" cy="0" r="4" fill="black"/><path d="M-5 10 Q0 15 5 10" fill="none" stroke="black" stroke-width="3" stroke-linecap="round"/></g>`, `<g transform="translate(50, 40)"><circle cx="-15" cy="0" r="3" fill="black"/><circle cx="15" cy="0" r="3" fill="black"/><ellipse cx="0" cy="15" rx="5" ry="8" fill="black"/></g>`, `<g transform="translate(50, 40)"><path d="M-25 -5 L-5 -5 L-5 5 L-20 10 Z" fill="black"/><path d="M25 -5 L5 -5 L5 5 L20 10 Z" fill="black"/><rect x="-5" y="-3" width="10" height="2" fill="black"/><path d="M-10 15 Q0 20 10 15" fill="none" stroke="black" stroke-width="3"/></g>`, `<g transform="translate(50, 40)"><path d="M-20 0 L-10 -5 L0 0" fill="none" stroke="black" stroke-width="3"/><path d="M0 0 L10 -5 L20 0" fill="none" stroke="black" stroke-width="3"/><path d="M-10 15 Q0 25 10 15" fill="none" stroke="black" stroke-width="3"/></g>`, `<g transform="translate(50, 42)"><circle cx="-15" cy="-5" r="3" fill="black"/><circle cx="15" cy="-5" r="3" fill="black"/><path d="M-5 10 Q-15 10 -20 0 Q-10 5 0 10 Q10 5 20 0 Q15 10 5 10 Z" fill="#2d3436" stroke="black" stroke-width="1"/></g>`, `<g transform="translate(50, 38)"><circle cx="0" cy="5" r="14" fill="white" stroke="black" stroke-width="2"/><circle cx="0" cy="5" r="6" fill="black"/><path d="M-8 25 Q0 20 8 25" fill="none" stroke="black" stroke-width="3"/></g>`, `<g transform="translate(50, 40)"><circle cx="-15" cy="0" r="3" fill="black"/><circle cx="15" cy="0" r="3" fill="black"/><path d="M-15 5 L-15 15" stroke="#74b9ff" stroke-width="3"/><path d="M15 5 L15 15" stroke="#74b9ff" stroke-width="3"/><path d="M-8 20 Q0 15 8 20" fill="none" stroke="black" stroke-width="3"/></g>`, `<g transform="translate(50, 40)"><circle cx="-12" cy="0" r="3" fill="black"/><path d="M-15 -3 L-18 -6 M-12 -3 L-12 -7" stroke="black" stroke-width="1.5"/><circle cx="12" cy="0" r="3" fill="black"/><path d="M15 -3 L18 -6 M12 -3 L12 -7" stroke="black" stroke-width="1.5"/><path d="M-5 10 Q0 13 5 10" fill="none" stroke="black" stroke-width="2"/></g>`, `<g transform="translate(50, 40)"><circle cx="-10" cy="0" r="5" fill="black"/><circle cx="-8" cy="-2" r="2" fill="white"/><circle cx="10" cy="0" r="5" fill="black"/><circle cx="12" cy="-2" r="2" fill="white"/><path d="M-2 8 Q0 6 2 8" fill="none" stroke="black" stroke-width="1.5"/></g>`, `<g transform="translate(50, 42)"><path d="M-12 0 L-8 4 L-4 0" fill="none" stroke="black" stroke-width="2"/><path d="M4 0 L8 4 L12 0" fill="none" stroke="black" stroke-width="2"/><ellipse cx="-12" cy="8" rx="4" ry="2" fill="#ff7675" opacity="0.6"/><ellipse cx="12" cy="8" rx="4" ry="2" fill="#ff7675" opacity="0.6"/></g>` ];
 
-    function generateSVG(config) { const color = colors[config.color % colors.length]; const hat = hats[config.hat % hats.length] || ''; const face = faces[config.face % faces.length]; return `<svg viewBox="0 -30 100 150" xmlns="http://www.w3.org/2000/svg"><g transform="translate(0, 10)"><ellipse cx="50" cy="95" rx="30" ry="8" fill="rgba(0,0,0,0.15)" /><path d="M18 60 Q10 70 12 80 Q15 85 25 75" fill="${color}" stroke="#3d3d3d" stroke-width="3"/><path d="M82 60 Q90 70 88 80 Q85 85 75 75" fill="${color}" stroke="#3d3d3d" stroke-width="3"/><path d="M 25 30 Q 25 0 50 0 Q 75 0 75 30 L 75 70 Q 75 90 65 90 L 60 90 L 60 105 Q 60 110 50 110 Q 40 110 40 105 L 40 90 L 35 90 Q 25 90 25 70 Z" fill="${color}" stroke="#3d3d3d" stroke-width="3" stroke-linejoin="round"/><ellipse cx="50" cy="45" rx="22" ry="18" fill="#ffdbac" stroke="#3d3d3d" stroke-width="0"/>${face}${hat}</g></svg>`; }
+    function generateSVG(config) { 
+        const color = colors[config.color % colors.length]; const hat = hats[config.hat % hats.length] || ''; const face = faces[config.face % faces.length]; 
+        return `<svg viewBox="0 -30 100 150" xmlns="http://www.w3.org/2000/svg"><g transform="translate(0, 10)"><ellipse cx="50" cy="95" rx="30" ry="8" fill="rgba(0,0,0,0.15)" /><path d="M18 60 Q10 70 12 80 Q15 85 25 75" fill="${color}" stroke="#3d3d3d" stroke-width="3"/><path d="M82 60 Q90 70 88 80 Q85 85 75 75" fill="${color}" stroke="#3d3d3d" stroke-width="3"/><path d="M 25 30 Q 25 0 50 0 Q 75 0 75 30 L 75 70 Q 75 90 65 90 L 60 90 L 60 105 Q 60 110 50 110 Q 40 110 40 105 L 40 90 L 35 90 Q 25 90 25 70 Z" fill="${color}" stroke="#3d3d3d" stroke-width="3" stroke-linejoin="round"/><ellipse cx="50" cy="45" rx="22" ry="18" fill="#ffdbac" stroke="#3d3d3d" stroke-width="0"/>${face}${hat}</g></svg>`; 
+    }
+
     function renderEditor() { const svg = generateSVG(avatarConfig); safeRender('avatar-editor-preview', svg); safeRender('reg-avatar-preview', svg); safeRender('edit-avatar-preview', svg); safeRender('my-avatar-home', svg); safeRender('home-btn-avatar', svg); safeRender('profile-avatar', svg); safeRender('modal-avatar', svg); safeRender('winner-avatar-display', svg); safeRender('loser-avatar-display', svg); }
     function changeConfig(type) { if(type === 'color') avatarConfig.color++; if(type === 'face') avatarConfig.face++; if(type === 'hat') avatarConfig.hat++; renderEditor(); }
     
@@ -418,14 +442,24 @@
     function goToSetup() { if(!myName) return alert("صمم شخصيتك أولاً!"); showScreen('setup-screen'); }
     function goToTopicsSetup() { const grid = document.getElementById('topics-config-grid'); grid.innerHTML = ''; allTopics.forEach(t => { const div = document.createElement('div'); div.className = 'topic-card selected'; div.innerText = t.icon+' '+t.label; div.dataset.id = t.id; div.onclick = () => div.classList.toggle('selected'); grid.appendChild(div); }); showScreen('topics-setup-screen'); }
     
+    // 🔥 تحديث دالة الإنشاء لدعم الغرف العامة
     function createRoom() { 
         selectedTopics = []; document.querySelectorAll('#topics-config-grid .selected').forEach(el => selectedTopics.push(el.dataset.id)); 
         if(selectedTopics.length === 0) return alert("اختر موضوعاً!"); 
+        
+        // قراءة حالة السويتش
         const isPublic = document.getElementById('public-room-toggle').checked;
-        socket.emit('create_private_room', { name: myName, avatarConfig, social: { insta: userStats.insta, snap: userStats.snap }, isPublic: isPublic }); 
+        
+        socket.emit('create_private_room', { 
+            name: myName, 
+            avatarConfig, 
+            social: { insta: userStats.insta, snap: userStats.snap },
+            isPublic: isPublic // إرسال حالة الغرفة
+        }); 
     }
 
     function showJoinCode() { let code = prompt("الكود:"); if(code) socket.emit('join_room', { code, name: myName, avatarConfig, social: { insta: userStats.insta, snap: userStats.snap } }); }
+    
     socket.on('go_to_setup', (code) => { currentRoomCode = code; saveSessionData(); document.getElementById('chat-toggle-btn').style.display = 'block'; socket.emit('save_settings', { roomCode: code, settings: { rounds: document.getElementById('rounds-setting').value, time: document.getElementById('time-setting').value, maxPlayers: document.getElementById('max-players').value, topics: selectedTopics } }); });
     socket.on('update_lobby', (data) => updateLobbyUI(data));
     function startGameFlow() { socket.emit('start_game_flow', currentRoomCode); }
@@ -484,14 +518,49 @@
     function sendChatMessage() { const inp = document.getElementById('chat-input'); const msg = inp.value.trim(); if(msg && currentRoomCode) { socket.emit('send_chat', { roomCode: currentRoomCode, message: msg }); inp.value = ''; } }
     function handleChatEnter(e) { if(e.key === 'Enter') sendChatMessage(); }
     socket.on('receive_chat', (data) => { const box = document.getElementById('chat-msgs-box'); const isMine = data.senderId === socket.id; const avatarSVG = generateSVG(data.avatarConfig || {color:0}); const div = document.createElement('div'); div.className = `chat-msg-row ${isMine ? 'mine' : 'theirs'}`; div.innerHTML = `<div class="chat-avatar-small">${avatarSVG}</div><div class="chat-content">${!isMine ? `<div class="chat-sender">${data.senderName}</div>` : ''}<div class="chat-bubble">${data.message}</div></div>`; box.appendChild(div); box.scrollTop = box.scrollHeight; if(!document.getElementById('chat-popup').classList.contains('open')) { document.getElementById('chat-toggle-btn').classList.add('has-new-msg'); playSound('msg'); } });
+    
+    // سحب الشات
     const chatPopup = document.getElementById('chat-popup'); const dragHandle = document.getElementById('chat-drag-handle'); let isDragging = false; let startX, startY, initialLeft, initialTop;
     function startDrag(e) { if (e.target.classList.contains('chat-close')) return; isDragging = true; const clientX = e.touches ? e.touches[0].clientX : e.clientX; const clientY = e.touches ? e.touches[0].clientY : e.clientY; startX = clientX; startY = clientY; const rect = chatPopup.getBoundingClientRect(); initialLeft = rect.left; initialTop = rect.top; chatPopup.style.bottom = 'auto'; chatPopup.style.right = 'auto'; chatPopup.style.left = initialLeft + 'px'; chatPopup.style.top = initialTop + 'px'; }
     function doDrag(e) { if (!isDragging) return; e.preventDefault(); const clientX = e.touches ? e.touches[0].clientX : e.clientX; const clientY = e.touches ? e.touches[0].clientY : e.clientY; const dx = clientX - startX; const dy = clientY - startY; chatPopup.style.left = (initialLeft + dx) + 'px'; chatPopup.style.top = (initialTop + dy) + 'px'; }
     function stopDrag() { isDragging = false; }
     dragHandle.addEventListener('mousedown', startDrag); document.addEventListener('mousemove', doDrag); document.addEventListener('mouseup', stopDrag); dragHandle.addEventListener('touchstart', startDrag, { passive: false }); document.addEventListener('touchmove', doDrag, { passive: false }); document.addEventListener('touchend', stopDrag);
-    function showPublicRooms() { if(!myName) return alert("صمم شخصيتك أولاً!"); showScreen('public-rooms-screen'); const list = document.getElementById('public-rooms-list'); list.innerHTML = '<p style="text-align:center; opacity:0.6; margin-top:20px;">جاري البحث... ⏳</p>'; socket.emit('get_public_rooms'); }
-    socket.on('public_rooms_list', (rooms) => { const list = document.getElementById('public-rooms-list'); list.innerHTML = ''; if (rooms.length === 0) { list.innerHTML = '<div style="text-align:center; margin-top:50px; opacity:0.6;"><h3>لا توجد غرف عامة حالياً 😴</h3><p>كن أنت المبادر وأنشئ غرفة!</p></div>'; return; } rooms.forEach(r => { list.innerHTML += `<div class="public-room-card" onclick="joinPublicRoom('${r.code}')"><div class="room-info"><h3>${r.hostName}</h3><div class="room-meta"><span>👥 ${r.playersCount}/${r.maxPlayers}</span><span>🔄 ${r.rounds} جولات</span></div></div><button class="room-join-btn">دخول 🚀</button></div>`; }); });
-    function joinPublicRoom(code) { socket.emit('join_room', { code, name: myName, avatarConfig, social: { insta: userStats.insta, snap: userStats.snap } }); }
+
+    // 🔥 دوال الغرف العامة
+    function showPublicRooms() {
+        if(!myName) return alert("صمم شخصيتك أولاً!");
+        showScreen('public-rooms-screen');
+        const list = document.getElementById('public-rooms-list');
+        list.innerHTML = '<p style="text-align:center; opacity:0.6; margin-top:20px;">جاري البحث... ⏳</p>';
+        socket.emit('get_public_rooms'); // طلب القائمة
+    }
+
+    socket.on('public_rooms_list', (rooms) => {
+        const list = document.getElementById('public-rooms-list');
+        list.innerHTML = '';
+        if (rooms.length === 0) {
+            list.innerHTML = '<div style="text-align:center; margin-top:50px; opacity:0.6;"><h3>لا توجد غرف عامة حالياً 😴</h3><p>كن أنت المبادر وأنشئ غرفة!</p></div>';
+            return;
+        }
+        rooms.forEach(r => {
+            list.innerHTML += `
+            <div class="public-room-card" onclick="joinPublicRoom('${r.code}')">
+                <div class="room-info">
+                    <h3>${r.hostName}</h3>
+                    <div class="room-meta">
+                        <span>👥 ${r.playersCount}/${r.maxPlayers}</span>
+                        <span>🔄 ${r.rounds} جولات</span>
+                    </div>
+                </div>
+                <button class="room-join-btn">دخول 🚀</button>
+            </div>`;
+        });
+    });
+
+    function joinPublicRoom(code) {
+        socket.emit('join_room', { code, name: myName, avatarConfig, social: { insta: userStats.insta, snap: userStats.snap } });
+    }
+
     renderEditor();
 </script>
 </body>
