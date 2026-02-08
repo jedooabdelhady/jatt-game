@@ -584,7 +584,8 @@
         const serverStartTime = data.startTime;
         const now = Date.now();
         const elapsedMs = now - serverStartTime;
-        const totalMs = data.time * 1000;
+        const timeInSeconds = parseInt(data.time) || 30;  // تحويل من string إلى number
+        const totalMs = timeInSeconds * 1000;
         const remainingMs = Math.max(0, totalMs - elapsedMs);
         const remainingSeconds = remainingMs / 1000;
 

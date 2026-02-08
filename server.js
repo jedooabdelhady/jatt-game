@@ -258,7 +258,17 @@ io.on('connection', (socket) => {
         }); 
     });
 
-    socket.on('save_settings', ({ roomCode, settings }) => { if (rooms[roomCode]) rooms[roomCode].settings = { ...rooms[roomCode].settings, ...settings }; });
+    socket.on('save_settings', ({ roomCode, settings }) => { 
+        if (rooms[roomCode]) {
+            rooms[roomCode].settings = { 
+                ...rooms[roomCode].settings, 
+                ...settings,
+                time: parseInt(settings.time) || 30,
+                rounds: parseInt(settings.rounds) || 5,
+                maxPlayers: parseInt(settings.maxPlayers) || 8
+            };
+        }
+    });
     
     socket.on('start_game_flow', (roomCode) => {
         const room = rooms[roomCode]; if (!room) return;
