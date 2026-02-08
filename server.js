@@ -260,13 +260,18 @@ io.on('connection', (socket) => {
 
     socket.on('save_settings', ({ roomCode, settings }) => { 
         if (rooms[roomCode]) {
+            const timeValue = parseInt(settings.time) || 30;
+            // تطبيق الحدود: الحد الأدنى 15 ثانية، الحد الأقصى 60 ثانية
+            const constrainedTime = Math.max(15, Math.min(60, timeValue));
+            
             rooms[roomCode].settings = { 
                 ...rooms[roomCode].settings, 
                 ...settings,
-                time: parseInt(settings.time) || 30,
+                time: constrainedTime,
                 rounds: parseInt(settings.rounds) || 5,
                 maxPlayers: parseInt(settings.maxPlayers) || 8
             };
+            console.log(`[Room ${roomCode}] Settings saved: time=${constrainedTime}s (requested: ${timeValue}s)`);
         }
     });
     
