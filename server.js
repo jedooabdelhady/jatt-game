@@ -2,7 +2,37 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
-const questionsData = require('./questions'); // تأكد أن ملف الأسئلة موجود بنفس الاسم
+const fs = require('fs');
+const questionsData = require('./questions');
+
+// === 📝 Rotating Logs System ===
+const logsDir = path.join(__dirname, 'logs');
+if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
+
+let currentLogFile = path.join(logsDir, `server-${new Date().toISOString().split('T')[0]}.log`);
+
+function writeLog(message) {
+    const timestamp = new Date().toISOString();
+    const logEntry = `[${timestamp}] ${message}`;
+    try {
+        fs.appendFileSync(currentLogFile, logEntry + '\n', 'utf8');
+        // Rotate log if file size > 5MB
+        const stats = fs.statSync(currentLogFile);
+        if (stats.size > 5 * 1024 * 1024) {
+            const newFile = path.join(logsDir, `server-${new Date().toISOString().split('T')[0]}-${Date.now()}.log`);
+            fs.renameSync(currentLogFile, newFile);
+            currentLogFile = path.join(logsDir, `server-${new Date().toISOString().split('T')[0]}.log`);
+        }
+    } catch(e) { console.error('Log write error:', e); }
+}
+
+// Wrap console.log
+const originalLog = console.log;
+console.log = function(...args) {
+    const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+    originalLog.apply(console, args);
+    writeLog('[APP] ' + msg);
+};
 
 const app = express();
 const server = http.createServer(app);
@@ -56,7 +86,9 @@ function normalizeText(text) {
 }
 
 io.on('connection', (socket) => {
-    console.log('New connection:', socket.id);
+    const logMsg = `[CONNECT] Socket connected: ${socket.id}`;
+    console.log(logMsg);
+    writeLog(logMsg);
 
     // === إنشاء الغرفة ===
     socket.on('create_private_room', ({ name, avatarConfig, social }) => {
@@ -71,6 +103,7 @@ io.on('connection', (socket) => {
             kickVotes: {},
             roundTimer: null 
         };
+        writeLog(`[ROOM_CREATE] New room created: ${roomCode} by ${socket.id}`);
         joinRoom(socket, roomCode, name, avatarConfig, social, true);
     });
 
@@ -432,7 +465,9 @@ io.on('connection', (socket) => {
 
     socket.on('leave_game', (roomCode) => leaveRoomLogic(socket, roomCode));
     socket.on('disconnect', () => { 
-        console.log('Disconnect:', socket.id); 
+        const logMsg = `[DISCONNECT] Socket disconnected: ${socket.id}`;
+        console.log(logMsg); 
+        writeLog(logMsg);
         const player = players[socket.id]; 
         if (player && player.roomCode) { 
             leaveRoomLogic(socket, player.roomCode);
@@ -460,7 +495,11 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+server.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📝 Logging to: ${logsDir}`);
+    writeLog(`✅ Server started on port ${PORT}`);
+});
 
 // ✅ تنظيف الغرف الفارغة كل 5 ثواني لمنع تسريب الذاكرة
 setInterval(() => {
