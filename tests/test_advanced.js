@@ -25,7 +25,7 @@ async function testMultiplePlayers() {
         // Join 5 guests
         await wait(900);
         for (let i = 0; i < 5; i++) {
-            const guest = io('http://localhost:4000', { reconnectionDelay: 0, forceNew: true });
+            const guest = io('http://localhost:3000', { reconnectionDelay: 0, forceNew: true });
             sockets.push(guest);
             guest.on('connect', () => {
                 guest.emit('join_room', { code: roomCode, name: `Guest${i+1}`, avatarConfig: {color:i}, social: {} });

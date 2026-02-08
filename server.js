@@ -380,10 +380,26 @@ io.on('connection', (socket) => {
         options.sort(() => Math.random() - 0.5);
         room.roundData.voteOptions = options; room.roundData.votes = {};
         
-        // تسجيل وصول مرحلة التصويت وعدد الخيارات
-        try { console.log(`[Room ${room.code}] voting_phase emitted: options=${options.length}`); } catch(e) {}
-        // نرسل الخيارات مع الـ ID عشان الكلاينت يعرف يمنع التصويت للنفس
-        io.to(room.code).emit('voting_phase', { options: options.map(o => ({ text: o.text, id: o.id })) });
+        // 🔥 تسجيل وصول مرحلة التصويت مع التايمر
+        room.roundData.voteStartTime = Date.now();
+        const votingTime = Math.min(room.settings.time, 20); // وقت التصويت (نفس وقت السؤال أو 20 ثانية كحد أقصى)
+        
+        try { console.log(`[Room ${room.code}] voting_phase emitted: options=${options.length}, votingTime=${votingTime}s`); } catch(e) {}
+        // نرسل الخيارات مع التايمر
+        io.to(room.code).emit('voting_phase', { 
+            options: options.map(o => ({ text: o.text, id: o.id })),
+            startTime: room.roundData.voteStartTime,
+            time: votingTime
+        });
+        
+        // تايمر التصويت
+        if (room.roundTimer) clearTimeout(room.roundTimer);
+        room.roundTimer = setTimeout(() => {
+            if (rooms[room.code] && room.gameState === 'voting') {
+                // إذا لم ينته التصويت، احسب النتائج تلقائياً
+                calculateResults(room);
+            }
+        }, (votingTime + 1) * 1000);
     }
 
     socket.on('submit_vote', ({ roomCode, choiceData }) => {
@@ -417,11 +433,17 @@ io.on('connection', (socket) => {
                     } 
                 }
             }
+            // ✅ إضافة التايمر لمرحلة النتائج
+            const resultsTime = 5; // 5 ثوانٍ لمراجعة النتائج
+            const resultsStartTime = Date.now();
+            
             io.to(room.code).emit('show_results', { 
                 truth: room.roundData.currentQuestion.truth, 
                 leaderboard: getLeaderboard(room), 
                 isFinal: (room.currentRound >= room.settings.rounds), 
-                hostId: room.hostId 
+                hostId: room.hostId,
+                startTime: resultsStartTime,
+                time: resultsTime
             });
         } catch(error) {
             console.error('Calculate results error:', error);
@@ -437,21 +459,30 @@ io.on('connection', (socket) => {
     socket.on('vote_kick', ({ targetId }) => {
         const player = players[socket.id]; if (!player) return;
         const room = rooms[player.roomCode]; if (!room) return;
-        if (targetId === socket.id) return;
+        if (targetId === socket.id) return; // لا يمكن الطرد النفس
+        
+        // تحقق من أن اللاعب موجود
+        if (!room.players.find(p => p.id === targetId)) return;
+        
+        if (!room.kickVotes) room.kickVotes = {};
         if (!room.kickVotes[targetId]) room.kickVotes[targetId] = [];
         if (!room.kickVotes[targetId].includes(socket.id)) {
             room.kickVotes[targetId].push(socket.id);
             const votesCount = room.kickVotes[targetId].length;
-            const requiredVotes = Math.floor(room.players.length / 2) + 1;
+            const activePlayersCount = room.players.filter(p => players[p.id]).length;
+            const requiredVotes = Math.floor(activePlayersCount / 2) + 1; // أغلبية
             const targetName = players[targetId] ? players[targetId].name : "اللاعب";
             io.to(room.code).emit('receive_chat', { senderId: 'SYSTEM', senderName: '⚠️ النظام', message: `تصويت لطرد ${targetName} (${votesCount}/${requiredVotes})` });
             if (votesCount >= requiredVotes) {
+                // ✅ الطرد موافق عليه
                 io.to(room.code).emit('receive_chat', { senderId: 'SYSTEM', senderName: '🚫 النظام', message: `تم طرد ${targetName}!` });
                 io.to(targetId).emit('kicked_out');
                 const targetSocket = io.sockets.sockets.get(targetId);
                 if (targetSocket) { leaveRoomLogic(targetSocket, room.code); targetSocket.leave(room.code); }
                 else { leaveRoomLogic({ id: targetId }, room.code); }
                 delete room.kickVotes[targetId];
+                // تحديث قائمة اللاعبين لجميع الآخرين
+                io.to(room.code).emit('player_left_update', room.players);
             }
         }
     });

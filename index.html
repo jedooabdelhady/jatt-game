@@ -619,11 +619,72 @@
     socket.on('voting_phase', (data) => { 
         saveSessionData();
         try { console.log('voting_phase received:', data.options); } catch(e) {}
-        clearTimeout(timerSoundTimeout); showScreen('vote-screen'); renderVotingOptions(data.options); renderFooterPlayers('vote-players-footer', allPlayersData); 
+        clearTimeout(timerSoundTimeout); 
+        showScreen('vote-screen'); 
+        renderVotingOptions(data.options); 
+        renderFooterPlayers('vote-players-footer', allPlayersData);
+        
+        // ✅ إضافة التايمر لمرحلة التصويت
+        const bar = document.getElementById('game-timer');
+        if(bar) {
+            bar.style.transition = 'none'; 
+            bar.style.width = '100%';
+            
+            const votingStartTime = data.startTime;
+            const now = Date.now();
+            const elapsedMs = now - votingStartTime;
+            const votingTimeSeconds = parseInt(data.time) || 20;
+            const totalMs = votingTimeSeconds * 1000;
+            const remainingMs = Math.max(0, totalMs - elapsedMs);
+            const remainingSeconds = remainingMs / 1000;
+            
+            setTimeout(() => {
+                bar.style.transition = `width ${remainingSeconds}s linear`;
+                bar.style.width = '0%';
+            }, 0);
+        }
     });
     function renderVotingOptions(options) { const list = document.getElementById('vote-options'); list.innerHTML = ''; options.forEach(opt => { const btn = document.createElement('button'); btn.className = 'vote-btn'; btn.innerText = opt.text; btn.onclick = () => { socket.emit('submit_vote', { roomCode: currentRoomCode, choiceData: opt }); document.querySelectorAll('.vote-btn').forEach(b => b.disabled = true); btn.style.borderColor='var(--primary)'; btn.style.color='var(--primary)'; }; list.appendChild(btn); }); }
     socket.on('show_results', (data) => showResultsUI(data));
-    function showResultsUI(data) { showScreen('results-screen'); document.getElementById('truth-display').innerText = data.truth; const list = document.getElementById('leaderboard-list'); list.innerHTML = ''; let myPointsChange = 0; data.leaderboard.forEach((p, i) => { if(p.id === socket.id) myPointsChange = p.lastPoints; const gain = p.lastPoints > 0 ? `<span style="color:var(--success)">+${p.lastPoints}</span>` : ''; const svg = generateSVG(p.avatarConfig || {color:0}); list.innerHTML += `<div class="leaderboard-item" onclick="showPlayerInfo('${p.id}')"><div style="display:flex; align-items:center; gap:10px;"><b>#${i+1}</b><div class="mini-avatar">${svg}</div><span>${p.name}</span></div><div>${gain} <b>${p.score}</b></div></div>`; }); if(myPointsChange > 0) { playSound('win'); myCurrentSessionScore += myPointsChange; } else playSound('lose'); const btn = document.getElementById('next-round-btn'); const wait = document.getElementById('waiting-host-msg'); const isHostNow = (socket.id === data.hostId); if(isHostNow) { btn.style.display = 'block'; wait.style.display = 'none'; btn.innerText = data.isFinal ? "🔥 إعلان الفائز" : "التالي ➡"; btn.onclick = () => socket.emit('next_step', currentRoomCode); } else { btn.style.display = 'none'; wait.style.display = 'block'; wait.innerText = data.isFinal ? "بانتظار النتائج..." : "بانتظار المضيف..."; } }
+    function showResultsUI(data) { 
+        showScreen('results-screen'); 
+        document.getElementById('truth-display').innerText = data.truth; 
+        const list = document.getElementById('leaderboard-list'); 
+        list.innerHTML = ''; 
+        let myPointsChange = 0; 
+        data.leaderboard.forEach((p, i) => { 
+            if(p.id === socket.id) myPointsChange = p.lastPoints; 
+            const gain = p.lastPoints > 0 ? `<span style="color:var(--success)">+${p.lastPoints}</span>` : ''; 
+            const svg = generateSVG(p.avatarConfig || {color:0}); 
+            list.innerHTML += `<div class="leaderboard-item" onclick="showPlayerInfo('${p.id}')"><div style="display:flex; align-items:center; gap:10px;"><b>#${i+1}</b><div class="mini-avatar">${svg}</div><span>${p.name}</span></div><div>${gain} <b>${p.score}</b></div></div>`; 
+        }); 
+        if(myPointsChange > 0) { playSound('win'); myCurrentSessionScore += myPointsChange; } else playSound('lose'); 
+        
+        // ✅ إضافة التايمر لمرحلة النتائج
+        const bar = document.getElementById('game-timer');
+        if(bar && data.startTime && data.time) {
+            bar.style.transition = 'none'; 
+            bar.style.width = '100%';
+            
+            const resultsStartTime = data.startTime;
+            const now = Date.now();
+            const elapsedMs = now - resultsStartTime;
+            const resultsTimeSeconds = parseInt(data.time) || 5;
+            const totalMs = resultsTimeSeconds * 1000;
+            const remainingMs = Math.max(0, totalMs - elapsedMs);
+            const remainingSeconds = remainingMs / 1000;
+            
+            setTimeout(() => {
+                bar.style.transition = `width ${remainingSeconds}s linear`;
+                bar.style.width = '0%';
+            }, 0);
+        }
+        
+        const btn = document.getElementById('next-round-btn'); 
+        const wait = document.getElementById('waiting-host-msg'); 
+        const isHostNow = (socket.id === data.hostId); 
+        if(isHostNow) { btn.style.display = 'block'; wait.style.display = 'none'; btn.innerText = data.isFinal ? "🔥 إعلان الفائز" : "التالي ➡"; btn.onclick = () => socket.emit('next_step', currentRoomCode); } else { btn.style.display = 'none'; wait.style.display = 'block'; wait.innerText = data.isFinal ? "بانتظار النتائج..." : "بانتظار المضيف..."; } 
+    }
     socket.on('game_over', (data) => { clearSessionData(); playSound('cheer'); showScreen('gameover-screen'); confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } }); document.getElementById('winner-name').innerText = data.winner.name; document.getElementById('winner-score').innerText = `${data.winner.score} نقطة`; safeRender('winner-avatar-display', generateSVG(data.winner.avatarConfig || {color:0})); document.getElementById('loser-name').innerText = data.loser.name; document.getElementById('loser-score').innerText = `${data.loser.score} نقطة`; safeRender('loser-avatar-display', generateSVG(data.loser.avatarConfig || {color:0})); userStats.gamesPlayed++; userStats.totalPoints += myCurrentSessionScore; if (data.winner.id === socket.id) userStats.wins++; calculateLevel(); saveStats(); myCurrentSessionScore = 0; const rBtn = document.getElementById('restart-btn'); const wMsg = document.getElementById('gameover-wait-msg'); const isHostNow = (socket.id === data.hostId); if(isHostNow) { rBtn.style.display = 'block'; wMsg.style.display = 'none'; } else { rBtn.style.display = 'none'; wMsg.style.display = 'block'; } });
     function restartGame() { socket.emit('restart_game', currentRoomCode); }
     function leaveGame() { if(!currentRoomCode) return goHome(); if(confirm("هل أنت متأكد من الخروج؟ سيتم حذفك من اللعبة.")) { socket.emit('leave_game', currentRoomCode); sessionStorage.removeItem('room_code'); currentRoomCode = null; document.getElementById('chat-toggle-btn').style.display = 'none'; document.querySelector('.exit-btn').style.display = 'none'; location.reload(); } }

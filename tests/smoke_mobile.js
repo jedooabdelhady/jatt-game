@@ -1,5 +1,5 @@
 const { io } = require('socket.io-client');
-const SERVER = process.env.SERVER || 'http://localhost:4000';
+const SERVER = process.env.SERVER || 'http://localhost:3000';
 
 function delay(ms){return new Promise(r=>setTimeout(r,ms));}
 

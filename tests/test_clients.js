@@ -3,8 +3,8 @@ const { io } = require('socket.io-client');
 function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
 async function run() {
-  const host = io('http://localhost:4000', { reconnectionDelay: 0, forceNew: true });
-  const guest = io('http://localhost:4000', { reconnectionDelay: 0, forceNew: true });
+  const host = io('http://localhost:3000', { reconnectionDelay: 0, forceNew: true });
+  const guest = io('http://localhost:3000', { reconnectionDelay: 0, forceNew: true });
 
   host.on('connect', () => console.log('[HOST] connected', host.id));
   guest.on('connect', () => console.log('[GUEST] connected', guest.id));
@@ -26,7 +26,7 @@ async function run() {
   guest.on('start_round', (d) => {
     console.log('[GUEST] will attempt simulated rejoin in 1500ms');
     setTimeout(() => {
-      const rejoin = io('http://localhost:4000', { reconnectionDelay: 0, forceNew: true });
+      const rejoin = io('http://localhost:3000', { reconnectionDelay: 0, forceNew: true });
       rejoin.on('connect', () => {
         console.log('[REJOIN] connected', rejoin.id, '-> emitting rejoin_game');
         rejoin.emit('rejoin_game', { roomCode: currentCode, name: 'GuestUser', avatarConfig: {color:1}, social: {} });
