@@ -522,8 +522,27 @@
                 }, 0);
             }
         } else if (data.gameState === 'voting') { 
-            showScreen('vote-screen'); renderVotingOptions(data.voteOptions); renderFooterPlayers('vote-players-footer', data.players, data.votedPlayers);
-            if(data.hasVoted) document.querySelectorAll('.vote-btn').forEach(b => b.disabled = true);
+            showScreen('vote-screen'); 
+            renderVotingOptions(data.voteOptions); 
+            renderFooterPlayers('vote-players-footer', data.players, data.votedPlayers);
+            
+            // ✅ إذا كان اللاعب صوت بالفعل، عطل الأزرار فوراً
+            if(data.hasVoted) {
+                setTimeout(() => {
+                    document.querySelectorAll('.vote-btn').forEach(b => b.disabled = true);
+                    // جد وأظهر الاختيار الذي صوت عليه من sessionStorage أو بالافتراض
+                    const savedVote = sessionStorage.getItem(`my_vote_${currentRoomCode}`);\n                    if (savedVote) {
+                        const savedChoice = JSON.parse(savedVote);
+                        document.querySelectorAll('.vote-btn').forEach(btn => {
+                            if (btn.innerText === savedChoice.text) {
+                                btn.style.borderColor = 'var(--primary)';
+                                btn.style.color = 'var(--primary)';
+                                btn.style.backgroundColor = 'rgba(108, 92, 231, 0.1)';
+                            }
+                        });
+                    }
+                }, 0);
+            }
         } else if (data.gameState === 'results') { showResultsUI(data.resultData); }
     }
 
@@ -621,6 +640,8 @@
         try { console.log('voting_phase received:', data.options); } catch(e) {}
         clearTimeout(timerSoundTimeout); 
         showScreen('vote-screen'); 
+        // ✅ حفظ معلومات التصويت للاسترجاع عند Refresh
+        sessionStorage.setItem(`vote_options_${currentRoomCode}`, JSON.stringify(data.options));
         renderVotingOptions(data.options); 
         renderFooterPlayers('vote-players-footer', allPlayersData);
         
@@ -644,8 +665,47 @@
             }, 0);
         }
     });
-    function renderVotingOptions(options) { const list = document.getElementById('vote-options'); list.innerHTML = ''; options.forEach(opt => { const btn = document.createElement('button'); btn.className = 'vote-btn'; btn.innerText = opt.text; btn.onclick = () => { socket.emit('submit_vote', { roomCode: currentRoomCode, choiceData: opt }); document.querySelectorAll('.vote-btn').forEach(b => b.disabled = true); btn.style.borderColor='var(--primary)'; btn.style.color='var(--primary)'; }; list.appendChild(btn); }); }
-    socket.on('show_results', (data) => showResultsUI(data));
+    function renderVotingOptions(options) { 
+        const list = document.getElementById('vote-options'); 
+        list.innerHTML = ''; 
+        
+        // ✅ استرجاع التصويت المحفوظ إن وجد
+        const savedVote = sessionStorage.getItem(`my_vote_${currentRoomCode}`);
+        const savedChoice = savedVote ? JSON.parse(savedVote) : null;
+        
+        options.forEach(opt => { 
+            const btn = document.createElement('button'); 
+            btn.className = 'vote-btn'; 
+            btn.innerText = opt.text; 
+            
+            // ✅ إذا كان هناك تصويت محفوظ، عطل الأزرار وأظهر الاختيار
+            if (savedChoice && savedChoice.id === opt.id) {
+                btn.disabled = true;
+                btn.style.borderColor = 'var(--primary)';
+                btn.style.color = 'var(--primary)';
+                btn.style.backgroundColor = 'rgba(108, 92, 231, 0.1)';
+            }
+            
+            btn.onclick = () => {
+                if (!btn.disabled) { // منع التصويت المتكرر
+                    // ✅ حفظ الاختيار في sessionStorage
+                    sessionStorage.setItem(`my_vote_${currentRoomCode}`, JSON.stringify(opt));
+                    
+                    socket.emit('submit_vote', { roomCode: currentRoomCode, choiceData: opt }); 
+                    document.querySelectorAll('.vote-btn').forEach(b => b.disabled = true); 
+                    btn.style.borderColor = 'var(--primary)'; 
+                    btn.style.color = 'var(--primary)';
+                    btn.style.backgroundColor = 'rgba(108, 92, 231, 0.1)';
+                }
+            }; 
+            list.appendChild(btn); 
+        }); 
+    }
+    socket.on('show_results', (data) => {
+        // ✅ حذف التصويت المحفوظ عند الانتقال للنتائج
+        sessionStorage.removeItem(`my_vote_${currentRoomCode}`);
+        showResultsUI(data);
+    });
     function showResultsUI(data) { 
         showScreen('results-screen'); 
         document.getElementById('truth-display').innerText = data.truth; 
