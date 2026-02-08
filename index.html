@@ -625,14 +625,15 @@
         const serverStartTime = data.startTime;
         const now = Date.now();
         const elapsedMs = now - serverStartTime;
-        const timeInSeconds = parseInt(data.time) || 30;  // تحويل من string إلى number
+        // ✅ تحويل صحيح من string إلى number مع التأكد من الحد الأدنى
+        const timeInSeconds = Math.max(1, Math.ceil(parseInt(data.time) || 30));
         const totalMs = timeInSeconds * 1000;
         const remainingMs = Math.max(0, totalMs - elapsedMs);
         const remainingSeconds = remainingMs / 1000;
 
         // تسجيل للمراقبة: وقت السيرفر والزمن المتبقي
         try {
-            console.log(`start_round received: serverStartTime=${serverStartTime}, now=${now}, elapsedMs=${elapsedMs}, remainingSeconds=${remainingSeconds.toFixed(2)}`);
+            console.log(`start_round received: serverStartTime=${serverStartTime}, timeInSeconds=${timeInSeconds}s, elapsedMs=${elapsedMs}ms, remainingSeconds=${remainingSeconds.toFixed(2)}s`);
         } catch(e) { }
 
         clearTimeout(timerSoundTimeout);
@@ -678,10 +679,16 @@
             const votingStartTime = data.startTime;
             const now = Date.now();
             const elapsedMs = now - votingStartTime;
-            const votingTimeSeconds = parseInt(data.time) || 20;
+            // ✅ تحويل الزمن إلى number بشكل صحيح
+            const votingTimeSeconds = Math.max(1, Math.ceil(parseInt(data.time) || 20));
             const totalMs = votingTimeSeconds * 1000;
             const remainingMs = Math.max(0, totalMs - elapsedMs);
             const remainingSeconds = remainingMs / 1000;
+            
+            // ✅ تسجيل للتحقق من الزمن
+            try {
+                console.log(`voting_phase: votingTime=${votingTimeSeconds}s, remainingSeconds=${remainingSeconds.toFixed(2)}s`);
+            } catch(e) {}
             
             setTimeout(() => {
                 bar.style.transition = `width ${remainingSeconds}s linear`;

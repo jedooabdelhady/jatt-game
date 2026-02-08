@@ -382,7 +382,8 @@ io.on('connection', (socket) => {
         
         // 🔥 تسجيل وصول مرحلة التصويت مع التايمر
         room.roundData.voteStartTime = Date.now();
-        const votingTime = Math.min(room.settings.time, 20); // وقت التصويت (نفس وقت السؤال أو 20 ثانية كحد أقصى)
+        // ✅ استخدام نفس الزمن الذي اختاره المستخدم للسؤال
+        const votingTime = room.settings.time; // استخدام الزمن المختار من الإعدادات
         
         try { console.log(`[Room ${room.code}] voting_phase emitted: options=${options.length}, votingTime=${votingTime}s`); } catch(e) {}
         // نرسل الخيارات مع التايمر
