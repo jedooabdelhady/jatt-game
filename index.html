@@ -543,7 +543,8 @@
                 setTimeout(() => {
                     document.querySelectorAll('.vote-btn').forEach(b => b.disabled = true);
                     // جد وأظهر الاختيار الذي صوت عليه من sessionStorage أو بالافتراض
-                    const savedVote = sessionStorage.getItem(`my_vote_${currentRoomCode}`); \n                    if (savedVote) {
+                    const savedVote = sessionStorage.getItem(`my_vote_${currentRoomCode}`);
+                    if (savedVote) {
                         const savedChoice = JSON.parse(savedVote);
                         document.querySelectorAll('.vote-btn').forEach(btn => {
                             if (btn.innerText === savedChoice.text) {
