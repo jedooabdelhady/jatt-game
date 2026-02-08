@@ -420,8 +420,18 @@
             if (inviteCode) {
                 socket.emit('join_room', { code: inviteCode, name: savedName, avatarConfig, social: { insta: userStats.insta, snap: userStats.snap } });
             } else if (savedRoom) {
-                document.getElementById('reconnect-msg').style.display = 'block';
-                setTimeout(() => { socket.emit('rejoin_game', { roomCode: savedRoom, name: savedName, avatarConfig, social: { insta: userStats.insta, snap: userStats.snap } }); }, 500);
+                // ✅ استعادة الحالة المحفوظة فوراً بدون انتظار من السيرفر
+                const savedGameState = sessionStorage.getItem('game_state');
+                if (savedGameState) {
+                    try {
+                        const gameState = JSON.parse(savedGameState);
+                        currentRoomCode = savedRoom;
+                        document.getElementById('chat-toggle-btn').style.display = 'block';
+                        restoreGameState(gameState);
+                    } catch(e) { console.error('Failed to restore game state:', e); }
+                }
+                // ثم إعادة الاتصال بالسيرفر لتحديث البيانات
+                setTimeout(() => { socket.emit('rejoin_game', { roomCode: savedRoom, name: savedName, avatarConfig, social: { insta: userStats.insta, snap: userStats.snap } }); }, 300);
             } else {
                 goHome(); 
             }
@@ -440,6 +450,8 @@
         document.getElementById('reconnect-msg').style.display = 'none';
         currentRoomCode = stateData.roomCode; myName = stateData.name; amIHost = stateData.isHost; allPlayersData = stateData.players;
         saveSessionData();
+        // ✅ تحديث الحالة المحفوظة مع أحدث البيانات من السيرفر
+        saveGameState(stateData);
         document.getElementById('chat-toggle-btn').style.display = 'block';
         restoreGameState(stateData);
     });
@@ -531,7 +543,7 @@
                 setTimeout(() => {
                     document.querySelectorAll('.vote-btn').forEach(b => b.disabled = true);
                     // جد وأظهر الاختيار الذي صوت عليه من sessionStorage أو بالافتراض
-                    const savedVote = sessionStorage.getItem(`my_vote_${currentRoomCode}`);\n                    if (savedVote) {
+                    const savedVote = sessionStorage.getItem(`my_vote_${currentRoomCode}`); \n                    if (savedVote) {
                         const savedChoice = JSON.parse(savedVote);
                         document.querySelectorAll('.vote-btn').forEach(btn => {
                             if (btn.innerText === savedChoice.text) {
@@ -551,6 +563,13 @@
             sessionStorage.setItem('room_code', currentRoomCode); 
             sessionStorage.setItem('player_name', myName); 
             sessionStorage.setItem('avatar_config', JSON.stringify(avatarConfig)); 
+        }
+    }
+    
+    function saveGameState(gameState) {
+        // ✅ حفظ الحالة الكاملة للعبة للعودة إليها بعد الريفريش
+        if(currentRoomCode && gameState) {
+            sessionStorage.setItem('game_state', JSON.stringify(gameState));
         }
     }
     function clearSessionData() { sessionStorage.removeItem('room_code'); sessionStorage.removeItem('player_name'); sessionStorage.removeItem('avatar_config'); }
@@ -581,6 +600,8 @@
     // 🔥🔥🔥 التايمر هنا 🔥🔥🔥
     socket.on('start_round', (data) => { 
         saveSessionData();
+        // ✅ حفظ بيانات مرحلة الإدخال
+        saveGameState({ gameState: 'input', questionData: data, players: allPlayersData, donePlayers: [], hasAnswered: false, roomCode: currentRoomCode });
         playSound('start'); 
         showScreen('game-screen'); 
         document.getElementById('question-text').innerHTML = data.question; 
@@ -637,6 +658,8 @@
     socket.on('wait_for_others', () => { document.getElementById('wait-msg-game').style.display='block'; document.getElementById('submit-ans-btn').style.display='none'; });
     socket.on('voting_phase', (data) => { 
         saveSessionData();
+        // ✅ حفظ بيانات مرحلة التصويت
+        saveGameState({ gameState: 'voting', voteOptions: data.options, players: allPlayersData, votedPlayers: [], hasVoted: false, roomCode: currentRoomCode });
         try { console.log('voting_phase received:', data.options); } catch(e) {}
         clearTimeout(timerSoundTimeout); 
         showScreen('vote-screen'); 
@@ -702,6 +725,8 @@
         }); 
     }
     socket.on('show_results', (data) => {
+        // ✅ حفظ بيانات مرحلة النتائج
+        saveGameState({ gameState: 'results', resultData: data, roomCode: currentRoomCode });
         // ✅ حذف التصويت المحفوظ عند الانتقال للنتائج
         sessionStorage.removeItem(`my_vote_${currentRoomCode}`);
         showResultsUI(data);
