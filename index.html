@@ -439,6 +439,7 @@
     socket.on('rejoin_success', (stateData) => {
         document.getElementById('reconnect-msg').style.display = 'none';
         currentRoomCode = stateData.roomCode; myName = stateData.name; amIHost = stateData.isHost; allPlayersData = stateData.players;
+        saveSessionData();
         document.getElementById('chat-toggle-btn').style.display = 'block';
         restoreGameState(stateData);
     });
@@ -526,8 +527,14 @@
         } else if (data.gameState === 'results') { showResultsUI(data.resultData); }
     }
 
-    function saveSessionData() { sessionStorage.setItem('room_code', currentRoomCode); sessionStorage.setItem('player_name', myName); sessionStorage.setItem('avatar_config', JSON.stringify(avatarConfig)); }
-    function clearSessionData() { sessionStorage.removeItem('room_code'); }
+    function saveSessionData() { 
+        if(currentRoomCode) {
+            sessionStorage.setItem('room_code', currentRoomCode); 
+            sessionStorage.setItem('player_name', myName); 
+            sessionStorage.setItem('avatar_config', JSON.stringify(avatarConfig)); 
+        }
+    }
+    function clearSessionData() { sessionStorage.removeItem('room_code'); sessionStorage.removeItem('player_name'); sessionStorage.removeItem('avatar_config'); }
     
     function showScreen(id) { 
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); 
@@ -547,13 +554,14 @@
     function createRoom() { selectedTopics = []; document.querySelectorAll('#topics-config-grid .selected').forEach(el => selectedTopics.push(el.dataset.id)); if(selectedTopics.length === 0) return alert("اختر موضوعاً!"); socket.emit('create_private_room', { name: myName, avatarConfig, social: { insta: userStats.insta, snap: userStats.snap } }); }
     function showJoinCode() { let code = prompt("الكود:"); if(code) socket.emit('join_room', { code, name: myName, avatarConfig, social: { insta: userStats.insta, snap: userStats.snap } }); }
     socket.on('go_to_setup', (code) => { currentRoomCode = code; saveSessionData(); document.getElementById('chat-toggle-btn').style.display = 'block'; socket.emit('save_settings', { roomCode: code, settings: { rounds: document.getElementById('rounds-setting').value, time: document.getElementById('time-setting').value, maxPlayers: document.getElementById('max-players').value, topics: selectedTopics } }); });
-    socket.on('update_lobby', (data) => updateLobbyUI(data));
+    socket.on('update_lobby', (data) => { if(currentRoomCode) saveSessionData(); updateLobbyUI(data); });}
     function startGameFlow() { socket.emit('start_game_flow', currentRoomCode); }
-    socket.on('choose_topic_phase', (data) => { showScreen('topic-screen'); handleTopicPhase(data); });
+    socket.on('choose_topic_phase', (data) => { showScreen('topic-screen'); saveSessionData(); handleTopicPhase(data); });
     function handleTopicPhase(data) { const cont = document.getElementById('topics-container'); cont.innerHTML = ''; if (socket.id === data.chooserId) { document.getElementById('chooser-msg').innerText = "اختر الموضوع"; data.availableTopics.forEach(tid => { const t = allTopics.find(x => x.id === tid); if(t) { const btn = document.createElement('div'); btn.className = 'topic-card'; btn.innerText = t.icon+' '+t.label; btn.onclick = () => socket.emit('topic_selected', { roomCode: currentRoomCode, topic: tid }); cont.appendChild(btn); } }); } else document.getElementById('chooser-msg').innerText = `${data.chooserName} يختار...`; }
     
     // 🔥🔥🔥 التايمر هنا 🔥🔥🔥
     socket.on('start_round', (data) => { 
+        saveSessionData();
         playSound('start'); 
         showScreen('game-screen'); 
         document.getElementById('question-text').innerHTML = data.question; 
@@ -608,6 +616,7 @@
     socket.on('truth_detected', (msg) => { playSound('win'); document.getElementById('truth-msg').innerText=msg; document.getElementById('truth-msg').style.display='block'; });
     socket.on('wait_for_others', () => { document.getElementById('wait-msg-game').style.display='block'; document.getElementById('submit-ans-btn').style.display='none'; });
     socket.on('voting_phase', (data) => { 
+        saveSessionData();
         try { console.log('voting_phase received:', data.options); } catch(e) {}
         clearTimeout(timerSoundTimeout); showScreen('vote-screen'); renderVotingOptions(data.options); renderFooterPlayers('vote-players-footer', allPlayersData); 
     });
@@ -703,23 +712,29 @@
 
     renderEditor();
 
-    // ✅ تنظيف الرسائل القديمة والذاكرة كل 5 ثواني لمنع تعليق البراوزر
-    const cleanupInterval = setInterval(() => {
+    // ✅ تنظيف الرسائل القديمة والذاكرة كل 8 ثواني لمنع تعليق البراوزر
+    let cleanupInterval = setInterval(() => {
         try {
             const chatBox = document.getElementById('chat-msgs-box');
             if (chatBox && chatBox.children.length > 50) {
-                // احذف الرسائل الأقدم (أول 10 رسائل)
                 while (chatBox.children.length > 40) {
                     chatBox.removeChild(chatBox.firstChild);
                 }
             }
-            
-            // تنظيف الذاكرة (garbage collection تلميح)
-            if (window.gc) window.gc();
-        } catch(e) {
-            console.error('Cleanup error:', e);
-        }
-    }, 5000); // ✅ غيّرت من 1000 إلى 5000 (كل 5 ثواني)
+        } catch(e) { /* no-op */ }
+    }, 8000);
+
+    // 🔧 تنظيف Listeners ذات الأداء العالية عند disconnect
+    socket.on('disconnect', () => {
+        if(cleanupInterval) clearInterval(cleanupInterval);
+        console.log('[PERF] Socket disconnected - cleanup done');
+    });
+
+    // 🔧 تنظيف عند إغلاق الصفحة
+    window.addEventListener('beforeunload', () => {
+        if(cleanupInterval) clearInterval(cleanupInterval);
+        if(!currentRoomCode) clearSessionData();
+    });
 </script>
 </body>
 </html>
