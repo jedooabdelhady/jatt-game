@@ -136,6 +136,12 @@ io.on('connection', (socket) => {
             }
 
             if (existingPlayerByName) {
+                // 🔥 إذا كان اللاعب موجوداً بالاسم واللعبة بدأت، قد يكون هو نفس الشخص يحاول العودة
+                if (room.gameState !== 'lobby') {
+                    // هنا نعتبره هو نفس الشخص ونسمح له بالعودة
+                    handlePlayerReconnect(socket, room, existingPlayerByName, avatarConfig, social);
+                    return;
+                }
                 name = `${name}_${Math.floor(Math.random() * 100)}`;
                 socket.emit('error_msg', `الاسم مكرر! دخلت باسم: ${name}`);
             }
@@ -173,7 +179,13 @@ io.on('connection', (socket) => {
             if (existingPlayer) {
                 handlePlayerReconnect(socket, room, existingPlayer, avatarConfig, social);
             } else {
-                joinRoom(socket, cleanCode, name, avatarConfig, social, false);
+                // إذا لم نجد اللاعب وكان اللوبي، يدخل كجديد. إذا بدأت، يرفض.
+                if (room.gameState === 'lobby') {
+                    joinRoom(socket, cleanCode, name, avatarConfig, social, false);
+                } else {
+                     socket.emit('error_msg', 'لا يمكن الانضمام، اللعبة جارية.');
+                     socket.emit('force_exit');
+                }
             }
         } else {
             socket.emit('error_msg', 'انتهت الجلسة.');
@@ -188,6 +200,7 @@ io.on('connection', (socket) => {
         if (newAvatar) player.avatarConfig = newAvatar;
         if (newSocial) player.social = newSocial;
         
+        // تحديث الـ players map
         delete players[oldSocketId];
         players[socket.id] = player;
         
@@ -484,8 +497,11 @@ io.on('connection', (socket) => {
                 io.to(room.code).emit('receive_chat', { senderId: 'SYSTEM', senderName: '🚫 النظام', message: `تم طرد ${targetName}!` });
                 io.to(targetId).emit('kicked_out');
                 const targetSocket = io.sockets.sockets.get(targetId);
-                if (targetSocket) { leaveRoomLogic(targetSocket, room.code); targetSocket.leave(room.code); }
-                else { leaveRoomLogic({ id: targetId }, room.code); }
+                
+                // 🔥 إصلاح: الطرد يعتبر خروجاً صريحاً (isExplicitExit = true)
+                if (targetSocket) { leaveRoomLogic(targetSocket, room.code, true); targetSocket.leave(room.code); }
+                else { leaveRoomLogic({ id: targetId }, room.code, true); }
+                
                 delete room.kickVotes[targetId];
                 // تحديث قائمة اللاعبين لجميع الآخرين
                 io.to(room.code).emit('player_left_update', room.players);
@@ -510,14 +526,17 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('leave_game', (roomCode) => leaveRoomLogic(socket, roomCode));
+    // 🔥 إصلاح: تمرير true لأن اللاعب ضغط زر الخروج بإرادته
+    socket.on('leave_game', (roomCode) => leaveRoomLogic(socket, roomCode, true));
+    
     socket.on('disconnect', () => { 
         const logMsg = `[DISCONNECT] Socket disconnected: ${socket.id}`;
         console.log(logMsg); 
         writeLog(logMsg);
         const player = players[socket.id]; 
         if (player && player.roomCode) { 
-            leaveRoomLogic(socket, player.roomCode);
+            // 🔥 إصلاح: تمرير false لأن هذا فصل غير مقصود (نت/براوزر)
+            leaveRoomLogic(socket, player.roomCode, false);
         } 
         delete players[socket.id];
         delete lastJoinAttempt[socket.id]; // ✅ نظف بيانات rate limit
@@ -526,17 +545,34 @@ io.on('connection', (socket) => {
         socket.removeAllListeners();
     }); 
 
-    function leaveRoomLogic(socket, code) {
-        const room = rooms[code]; if (room) {
+    // 🔥 إصلاح: تعديل الدالة لتقبل معامل isExplicitExit
+    function leaveRoomLogic(socket, code, isExplicitExit = false) {
+        const room = rooms[code]; 
+        if (room) {
+            // 🔥 اللوجيك الجديد:
+            // إذا كانت اللعبة جارية (ليست في اللوبي) واللاعب لم يخرج بإرادته (فصل)، لا تحذفه
+            if (room.gameState !== 'lobby' && !isExplicitExit) {
+                console.log(`[PRESERVE] Player ${socket.id} disconnected but kept in room ${code} for reconnection.`);
+                return; 
+            }
+
             room.players = room.players.filter(p => p.id !== socket.id);
             if (room.availableChoosers) room.availableChoosers = room.availableChoosers.filter(id => id !== socket.id);
             if (room.kickVotes && room.kickVotes[socket.id]) delete room.kickVotes[socket.id];
-            if (socket.id === room.hostId && room.players.length > 0) { room.hostId = room.players[0].id; room.players[0].isHost = true; }
+            
+            if (socket.id === room.hostId && room.players.length > 0) { 
+                room.hostId = room.players[0].id; 
+                room.players[0].isHost = true; 
+            }
+            
             if (room.players.length === 0) {
                 if (room.roundTimer) clearTimeout(room.roundTimer); 
                 delete rooms[code];
             }
-            else { io.to(code).emit('player_left_update', room.players); if (room.gameState === 'lobby') io.to(code).emit('update_lobby', { code: code, players: room.players, hostId: room.hostId }); }
+            else { 
+                io.to(code).emit('player_left_update', room.players); 
+                if (room.gameState === 'lobby') io.to(code).emit('update_lobby', { code: code, players: room.players, hostId: room.hostId }); 
+            }
         }
     }
 });
